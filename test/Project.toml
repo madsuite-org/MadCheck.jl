@@ -1,0 +1,7 @@
+[deps]
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+MadCheck = "3e0fd228-9435-44ca-b225-69ecad6e25c3"
+MadNLP = "2621e9c9-9eb4-46b1-8089-e8c72242dfb6"
+NLPModels = "a4795742-8479-5a88-8948-cc11e1c8c1a6"
+NLPModelsJuMP = "792afdf1-32c1-5681-94e0-d7bf7a5df49e"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
