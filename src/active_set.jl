@@ -3,39 +3,36 @@
 
 Base type for the different active set methods implemented
 """
-
 abstract type AbstractActiveSetMethod end
 
 """
-    ActiveMethodSimple <: AbstractActiveSetMethod
+    BasicActiveSet <: AbstractActiveSetMethod
 
-composite type for the naive method consisting of runing the test c(x) = 0, 
+Composite type for the basic method consisting of runing the test c(x) = 0, 
 contains one parameter
     `tol`: tolerance of the method
 """
-
-struct ActiveMethodSimple <: AbstractActiveSetMethod
+struct BasicActiveSet <: AbstractActiveSetMethod
     tol::Float64
 end
 
 """
-    ActiveMethodSimple(; kwargs...)
+    BasicActiveSet(; kwargs...)
 
 Creates an ActiveMethodeSimple with `tol` = 1e-8.
 
 """
-
-ActiveMethodSimple(;tol = 1e-8) = ActiveMethodSimple(tol)
+BasicActiveSet(;tol = 1e-8) = BasicActiveSet(tol)
 
 """
-    ActiveMethodLP_P <: AbstractActiveSetMethod
+    PrimalActiveSetLP <: AbstractActiveSetMethod
 
-composite type for the primal trust region method presented in [OberlinandWright-2006](@cite)
+Composite type for the primal trust region method presented in [OberlinandWright-2006](@cite). We note that this method cannot detect weakly active constraints.
 Contains the following fields:
 -`silent`: bool setting the optimization solver used to silent (true) or not (false)
 -`tol`: tolerance of the method
 -`linear_program_solver`: linear solver used for the LP subproblem solved in the method
--`solver_attributes`: additional JuMP options to be given to the solver
+-`solver_options`: additional JuMP options to be given to the solver
 -`ν`: penalty parameter, see [OberlinandWright-2006](@cite)
 -`Δ`: trust region parameter, see [OberlinandWright-2006](@cite)
 
@@ -43,40 +40,37 @@ Contains the following fields:
 [OberlinandWright-2006] Oberlin and Wright - 2006 - Active Set Identification in Nonlinear Programming
 
 """
-
-struct ActiveMethodLP_P <: AbstractActiveSetMethod
+struct PrimalActiveSetLP <: AbstractActiveSetMethod
     silent::Bool
     tol::Float64
     linear_program_solver::DataType
-    solver_attributes::Tuple{Vararg{Pair}}
+    solver_options::Tuple{Vararg{Pair}}
     ν::Float64
     Δ::Float64
 end
 
 """
-    ActiveMethodeMethodLP_P(linear_program_solver; kwargs...)
+    PrimalActiveSetLP(linear_program_solver; kwargs...)
 
-Create an ActiveMethodeMethodLPEC where all fields can be specified as keyword arguments, a linear program solver must be provided.
+Create an PrimalActiveSetLP where all fields can be specified as keyword arguments, a linear program solver and the trust region parameter must be provided.
 The following default values are set
 -`silent`: true
 -`tol`: 1e-8
--`solver_attributes`: () i.e. none
+-`solver_options`: () i.e. none
 -`ν`: NaN which is replaced by 2*max(norm(λ, Inf), 1) when the associated find_active() is used, with λ the multipliers of the problem
--`Δ`:-NaN which is replaced by 4/(m+n) when the associated find_active() is used, with n the number of variables and m of constraints
 """
-
-ActiveMethodLP_P(linear_program_solver::DataType ;silent = true, tol = 1e-8, solver_attributes = (), ν = NaN, Δ = NaN) = ActiveMethodLP_P(silent, tol, linear_program_solver, solver_attributes, ν,Δ)
+PrimalActiveSetLP(linear_program_solver::DataType, Δ;silent = true, tol = 1e-8, solver_options = (), ν = NaN) = PrimalActiveSetLP(silent, tol, linear_program_solver, solver_options, ν,Δ)
 
 
 """
-    ActiveMethodLPEC <: AbstractActiveSetMethod
+    PrimalDualActiveSetLPEC <: AbstractActiveSetMethod
 
-composite type for the method based on the primal-dual estimate presented in [OberlinandWright-2006](@cite)
+Composite type for the method based on the primal-dual estimate presented in [OberlinandWright-2006](@cite)
 Contains the following fields:
 -`silent`: bool setting the optimization solver used to silent (true) or not (false)
 -`tol`: tolerance of the method
 -`solver`: solver used for the MILP subproblem solved in the method
--`solver_attributes`: additional JuMP options to be given to the solver
+-`solver_options`: additional JuMP options to be given to the solver
 -`M`: big M constant, see [OberlinandWright-2006](@cite)
 -`β`: positive test parameter, see [OberlinandWright-2006](@cite)
 -`σ`: test parameter in (0,1), see [OberlinandWright-2006](@cite)
@@ -86,40 +80,40 @@ Contains the following fields:
 
 """
 
-struct ActiveMethodLPEC <: AbstractActiveSetMethod
+struct PrimalDualActiveSetLPEC <: AbstractActiveSetMethod
     silent::Bool
     tol::Float64
     solver::DataType
-    solver_attributes::Tuple{Vararg{Pair}}
+    solver_options::Tuple{Vararg{Pair}}
     M::Float64
     β::Float64
     σ::Float64
 end
 
 """
-    ActiveMethodeMethodLPEC(solver; kwargs...)
+    PrimalDualActiveSetLPEC(solver; kwargs...)
 
-Create an ActiveMethodeMethodLPEC where all fields can be specified as keyword arguments, a solver must be provided.
+Create an PrimalDualActiveSetLPEC where all fields can be specified as keyword arguments, a MILP optimization solver must be provided.
 The following default values are set:
 -`silent`: true
 -`tol`: 1e-8
--`solver_attributes`: () i.e. none
+-`solver_options`: () i.e. none
 -`M`: NaN wich is replaced by 10*max(norm(λ_ineq, Inf), norm(c_ineq, Inf)) when the associated find_active() is used, with c_ineq is the inequality constraints and λ_ineq their associated multipliers
 -`β`: NaN wich is replaced by 1/(m+n) when the associated find_active() is used, with n the number of variables and m of constraints
 -`σ`: 0.75
 """
 
-ActiveMethodLPEC(solver::DataType ;silent = true, tol = 1e-8, solver_attributes = (), M = NaN, β = NaN, σ = 0.75) = ActiveMethodLPEC(silent, tol, solver, solver_attributes, M, β, σ)
+PrimalDualActiveSetLPEC(solver::DataType ;silent = true, tol = 1e-8, solver_options = (), M = NaN, β = NaN, σ = 0.75) = PrimalDualActiveSetLPEC(silent, tol, solver, solver_options, M, β, σ)
 
 """
-    ActiveMethodLPEC_A <: AbstractActiveSetMethod
+    ApproximatePrimalDualActiveSetLPEC <: AbstractActiveSetMethod
 
-composite type for the linear programming approximation to the method based on the primal-dual estimate presented in [OberlinandWright-2006](@cite)
+Composite type for the linear programming approximation to the method based on the primal-dual estimate presented in [OberlinandWright-2006](@cite)
 Contains the following fields:
 -`silent`: bool setting the optimization solver used to silent (true) or not (false)
 -`tol`: tolerance of the method
 -`linear_program_solver`: linear solver used for the LP subproblem solved in the method
--`solver_attributes`: additional JuMP options to be given to the solver
+-`solver_options`: additional JuMP options to be given to the solver
 -`β`: positive test parameter, see [OberlinandWright-2006](@cite)
 -`σ`: test parameter in (0,1), see [OberlinandWright-2006](@cite)
 
@@ -128,42 +122,41 @@ Contains the following fields:
 
 """
 
-struct ActiveMethodLPEC_A <: AbstractActiveSetMethod
+struct ApproximatePrimalDualActiveSetLPEC <: AbstractActiveSetMethod
     silent::Bool
     tol::Float64
     linear_program_solver::DataType
-    solver_attributes::Tuple{Vararg{Pair}}
+    solver_options::Tuple{Vararg{Pair}}
     β::Float64
     σ::Float64
 end
 
 """
-ActiveMethodeMethodLPEC_A(linear_program_solver; kwargs...)
+ApproximatePrimalDualActiveSetLPEC(linear_program_solver; kwargs...)
 
-Create an ActiveMethodeMethodLPEC_A where all fields can be specified as keyword arguments, linear_program_solver must be provided.
+Create an ApproximatePrimalDualActiveSetLPEC where all fields can be specified as keyword arguments, linear_program_solver must be provided.
 The following default values are set:
 -`silent`: true
 -`tol`: 1e-8
--`solver_attributes`: () i.e. none
+-`solver_options`: () i.e. none
 -`β`: NaN wich is replaced by 1/(m+n) when the associated find_active() is used, with n the number of variables and m of constraints
 -`σ`: 0.90
 """
 
-ActiveMethodLPEC_A(linear_program_solver::DataType ;silent = true, tol = 1e-8, solver_attributes = (), β = NaN, σ = 0.90) = ActiveMethodLPEC_A(silent, tol, linear_program_solver, solver_attributes, β, σ)
+ApproximatePrimalDualActiveSetLPEC(linear_program_solver::DataType ;silent = true, tol = 1e-8, solver_options = (), β = NaN, σ = 0.90) = ApproximatePrimalDualActiveSetLPEC(silent, tol, linear_program_solver, solver_options, β, σ)
 
 
 """
-    find_active(nlp, results, method::ActiveMethodeNaive)
-
-Finds the active set at results using the simple test c(x) = 0
+    find_active(nlp, results, method::BasicActiveSet)
+0
+Find the active inequality constraints ``c_i`` matching their lower-bound (``c_i(x) = lb_i``) or their upper-bound (``c_i(x) = ub_i``) at the current solution ``x`` store in `results.solution`
 
 Returns named tuple with 2 attributes:
 - `active` : active set of usual constraints found
 - `active_boundary` : active set of boundary constraints found
 
 """
-
-function find_active(nlp, results, method::ActiveMethodSimple)
+function find_active(nlp, results, method::BasicActiveSet)
     tol = method.tol
 
     x = results.solution
@@ -208,9 +201,10 @@ function find_active(nlp, results, method::ActiveMethodSimple)
 end
 
 """
-    find_active(nlp, results, method::ActiveMethodeMethodLP_P)
+    find_active(nlp, results, method::PrimalActiveSetLP)
 
 Implement the primal trust region method presented in [OberlinandWright-2006](@cite). For finding the active set at a solution with results being a point near the solution.
+We note that this method cannot detect weakly active constraints.
 
 Returns named tuple with 2 attributes:
 - `active` : active set of usual constraints found
@@ -219,9 +213,7 @@ Returns named tuple with 2 attributes:
 # Reference
 [OberlinandWright-2006] Oberlin and Wright - 2006 - Active Set Identification in Nonlinear Programming
 """
-
-
-function find_active(nlp, results, method::ActiveMethodLP_P)
+function find_active(nlp, results, method::PrimalActiveSetLP)
     n = NLPModels.get_nvar(nlp)
     m = NLPModels.get_ncon(nlp)
     tol = method.tol
@@ -235,12 +227,6 @@ function find_active(nlp, results, method::ActiveMethodLP_P)
     ilow = nlp.meta.ilow
     iupp = nlp.meta.iupp
     irng = nlp.meta.irng
-
-    allupp_con = vcat(jrng, jupp)
-    alllow_con = vcat(jrng, jlow)
-
-    allupp_var = vcat(irng, iupp)
-    alllow_var = vcat(irng, ilow)
 
     lvar = nlp.meta.lvar
     uvar = nlp.meta.uvar
@@ -267,16 +253,41 @@ function find_active(nlp, results, method::ActiveMethodLP_P)
     n_eq = length(c_eq)
     J_eq = vcat(Jac[jfix,:], spdiagm(ones(n))[ifix,:])
 
-    # we double the range constraints and use the convention c(x) <= 0
-    c_ineq = vcat(constraints[allupp_con] - ucon[allupp_con], 
-             lcon[alllow_con] - constraints[alllow_con], 
-             x[allupp_var] - uvar[allupp_var],
-             lvar[alllow_var] - x[alllow_var]
+    c_ineq = vcat(constraints[jrng],
+                  constraints[jupp],
+                  constraints[jlow],
+                  x[irng],
+                  x[iupp],
+                  x[ilow],
     )
-    indices_to_constraints = vcat(allupp_con, alllow_con, allupp_var, alllow_var)
-    n_ineq = length(c_ineq)
-    J_ineq = vcat(Jac[allupp_con,:], -Jac[alllow_con,:], spdiagm(ones(n))[allupp_var,:], -spdiagm(ones(n))[alllow_var,:])
 
+    u = vcat(ucon[jrng],
+             ucon[jupp],
+             ucon[jlow],
+             uvar[irng],
+             uvar[iupp],
+             uvar[ilow],
+    )
+
+    l = vcat(lcon[jrng],
+             lcon[jupp],
+             lcon[jlow],
+             lvar[irng],
+             lvar[iupp],
+             lvar[ilow],
+    )
+
+    J_ineq = vcat(Jac[jrng, :],
+                  Jac[jupp, :],
+                  Jac[jlow, :],
+                  spdiagm(ones(n))[irng,:],
+                  spdiagm(ones(n))[iupp,:],
+                  spdiagm(ones(n))[ilow,:],
+    )
+
+    indices_to_constraints = vcat(jrng, jupp, jlow, irng, iupp, ilow)
+    n_ineq = length(c_ineq)
+    n_ineq_con = length(jrng) + length(jupp) + length(jlow)
 
     # Parameter calculation
     if isnan(method.ν)
@@ -284,11 +295,7 @@ function find_active(nlp, results, method::ActiveMethodLP_P)
     else
         ν = method.ν
     end
-    if isnan(method.Δ)
-        Δ = 4/n
-    else
-        Δ = method.Δ
-    end
+    Δ = method.Δ
 
     # Error testing
     if Δ <= 0
@@ -299,7 +306,7 @@ function find_active(nlp, results, method::ActiveMethodLP_P)
     end
 
     # Sub problem resolution
-    model = Model(optimizer_with_attributes(method.linear_program_solver,  method.solver_attributes...))
+    model = Model(optimizer_with_attributes(method.linear_program_solver,  method.solver_options...))
 
     if method.silent
         set_silent(model)
@@ -320,8 +327,15 @@ function find_active(nlp, results, method::ActiveMethodLP_P)
 
     if n_ineq != 0
         @variable(model,  r[1:n_ineq] >= 0)
-
-        @constraint(model, J_ineq * d + c_ineq .<= r)
+        
+        for i in 1:n_ineq
+            if isfinite(u[i])
+                @constraint(model, J_ineq[i,:]' * d + c_ineq[i] <= u[i] + r[i])
+            end
+            if isfinite(l[i])
+                @constraint(model, J_ineq[i,:]' * d + c_ineq[i] >= l[i] + r[i])
+            end
+        end
 
         @expression(model, slackCost_ineq, ν * sum(r))
     else
@@ -344,11 +358,11 @@ function find_active(nlp, results, method::ActiveMethodLP_P)
     active_boundary = Int64[]
 
     for i in 1:n_ineq
-        if dot(J_ineq[i, :], d_sol) + c_ineq[i] >= -tol
-            if i <= length(allupp_con) + length(alllow_con)
-                !(i in active) && push!(active, indices_to_constraints[i])
+        if dot(J_ineq[i, :], d_sol) + c_ineq[i] >= u[i] - tol || dot(J_ineq[i, :], d_sol) + c_ineq[i] <= l[i] + tol 
+            if i <= n_ineq_con
+                push!(active, indices_to_constraints[i])
             else
-                !(i in active_boundary) && push!(active_boundary, indices_to_constraints[i])
+                push!(active_boundary, indices_to_constraints[i])
             end
         end
     end
@@ -358,7 +372,7 @@ function find_active(nlp, results, method::ActiveMethodLP_P)
 end
 
 """
-    find_active(nlp, results, method::ActiveMethodeMethodLPEC)
+    find_active(nlp, results, method::PrimalDualActiveSetLPEC)
 
 
 Implements the method based on the primal-dual estimate presented in [OberlinandWright-2006](@cite). For finding the active set at a solution with results being a point near the solution.
@@ -370,8 +384,7 @@ Returns named tuple with 2 attributes:
 # Reference
 [OberlinandWright-2006] Oberlin and Wright - 2006 - Active Set Identification in Nonlinear Programming
 """
-
-function find_active(nlp, results, method::ActiveMethodLPEC)
+function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
     n = NLPModels.get_nvar(nlp)
     m = NLPModels.get_ncon(nlp)
     tol = method.tol
@@ -417,15 +430,30 @@ function find_active(nlp, results, method::ActiveMethodLPEC)
     J_eq = vcat(Jac[jfix,:], spdiagm(ones(n))[ifix,:])
     Jt_eq = transpose(J_eq)
 
-    # we double the range constraints and use the convention c(x) <= 0
-    c_ineq = vcat(constraints[allupp_con] - ucon[allupp_con], 
-             lcon[alllow_con] - constraints[alllow_con], 
-             x[allupp_var] - uvar[allupp_var],
-             lvar[alllow_var] - x[alllow_var]
+    # For inequality contraints, we use the convention c(x) <= 0
+
+    c_ineq = vcat(min.(constraints[jrng] - ucon[jrng], lcon[jrng] - constraints[jrng]),
+                  constraints[jupp] -  ucon[jupp],
+                  lcon[jlow] - constraints[jlow],
+                  min.(x[irng] - uvar[irng], lvar[irng] - x[irng]),
+                  x[iupp] - uvar[iupp],
+                  lvar[ilow] - x[ilow],
     )
-    indices_to_constraints = vcat(allupp_con, alllow_con, allupp_var, alllow_var)
+
+    sign_con = [(ucon[i] - constraints[i]) > (constraints[i] - lcon[i]) ? -1 : 1 for i in jrng]
+    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in jrng]
+
+    J_ineq = vcat(Jac[jrng, :] .* sign_con,
+                  Jac[jupp, :],
+                  -Jac[jlow, :],
+                  spdiagm(ones(n))[irng,:] .* sign_var,
+                  spdiagm(ones(n))[iupp,:],
+                  -spdiagm(ones(n))[ilow,:],
+    )
+
+    indices_to_constraints = vcat(jrng, jupp, jlow, irng, iupp, ilow)
     n_ineq = length(c_ineq)
-    J_ineq = vcat(Jac[allupp_con,:], -Jac[alllow_con,:], spdiagm(ones(n))[allupp_var,:], -spdiagm(ones(n))[alllow_var,:])
+    n_ineq_con = length(jrng) + length(jupp) + length(jlow)
     Jt_ineq = transpose(J_ineq)
 
     # Parameter calculation
@@ -455,7 +483,7 @@ function find_active(nlp, results, method::ActiveMethodLPEC)
  
 
     # Sub problem resolution
-    model = Model(optimizer_with_attributes(method.solver,  method.solver_attributes...))
+    model = Model(optimizer_with_attributes(method.solver,  method.solver_options...))
 
     if method.silent
         set_silent(model)
@@ -513,10 +541,10 @@ function find_active(nlp, results, method::ActiveMethodLPEC)
 
     for i in 1:n_ineq
         if c_ineq[i] >= -(β*ω)^σ - tol
-            if i <= length(allupp_con) + length(alllow_con)
-                !(i in active) && push!(active, indices_to_constraints[i])
+            if i <= n_ineq_con
+                push!(active, indices_to_constraints[i])
             else
-                !(i in active_boundary) && push!(active_boundary, indices_to_constraints[i])
+                push!(active_boundary, indices_to_constraints[i])
             end
         end
     end
@@ -526,7 +554,7 @@ end
 
 
 """
-    find_active(nlp, results, method::ActiveMethodeMethodLPEC_A)
+    find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
 
 Implements the linear programming approximation of the method based on the primal-dual estimate presented in [OberlinandWright-2006](@cite). For finding the active set at a solution with results being a point near the solution.
 
@@ -537,8 +565,7 @@ Returns named tuple with 2 attributes:
 # Reference
 [OberlinandWright-2006] Oberlin and Wright - 2006 - Active Set Identification in Nonlinear Programming
 """
-
-function find_active(nlp, results, method::ActiveMethodLPEC_A)
+function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
     n = NLPModels.get_nvar(nlp)
     m = NLPModels.get_ncon(nlp)
     tol = method.tol
@@ -584,18 +611,34 @@ function find_active(nlp, results, method::ActiveMethodLPEC_A)
     J_eq = vcat(Jac[jfix,:], spdiagm(ones(n))[ifix,:])
     Jt_eq = transpose(J_eq)
 
-    # we double the range constraints and use the convention c(x) <= 0
-    c_ineq = vcat(constraints[allupp_con] - ucon[allupp_con], 
-             lcon[alllow_con] - constraints[alllow_con], 
-             x[allupp_var] - uvar[allupp_var],
-             lvar[alllow_var] - x[alllow_var]
+    # For inequality contraints, we use the convention c(x) <= 0
+
+    c_ineq = vcat(min.(constraints[jrng] - ucon[jrng], lcon[jrng] - constraints[jrng]),
+                  constraints[jupp] -  ucon[jupp],
+                  lcon[jlow] - constraints[jlow],
+                  min.(x[irng] - uvar[irng], lvar[irng] - x[irng]),
+                  x[iupp] - uvar[iupp],
+                  lvar[ilow] - x[ilow],
     )
-    indices_to_constraints = vcat(allupp_con, alllow_con, allupp_var, alllow_var)
+
+    sign_con = [(ucon[i] - constraints[i]) > (constraints[i] - lcon[i]) ? -1 : 1 for i in jrng]
+    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in jrng]
+
+    J_ineq = vcat(Jac[jrng, :] .* sign_con,
+                  Jac[jupp, :],
+                  -Jac[jlow, :],
+                  spdiagm(ones(n))[irng,:] .* sign_var,
+                  spdiagm(ones(n))[iupp,:],
+                  -spdiagm(ones(n))[ilow,:],
+    )
+
+    indices_to_constraints = vcat(jrng, jupp, jlow, irng, iupp, ilow)
     n_ineq = length(c_ineq)
+    n_ineq_con = length(jrng) + length(jupp) + length(jlow)
+    Jt_ineq = transpose(J_ineq)
+
     neg_idx = findall(x -> x<-tol, c_ineq)
     pos_idx = setdiff(1:n_ineq, neg_idx)
-    J_ineq = vcat(Jac[allupp_con,:], -Jac[alllow_con,:], spdiagm(ones(n))[allupp_var,:], -spdiagm(ones(n))[alllow_var,:])
-    Jt_ineq = transpose(J_ineq)
 
     # Parameter calculation
     K_1 = max(norm(c_ineq, Inf), norm(y, Inf), norm(zl, Inf), norm(zu, Inf))
@@ -616,7 +659,7 @@ function find_active(nlp, results, method::ActiveMethodLPEC_A)
     end
     
     # Sub problem resolution
-    model = Model(optimizer_with_attributes(method.linear_program_solver,  method.solver_attributes...))
+    model = Model(optimizer_with_attributes(method.linear_program_solver,  method.solver_options...))
 
     if method.silent
         set_silent(model)
@@ -669,8 +712,8 @@ function find_active(nlp, results, method::ActiveMethodLPEC_A)
     ρ_sup = sum(clamp(-c_ineq[i] * λ_ineq_sol[i], 0., Inf)^(1/2) for i in neg_idx; init=0.) +
             sum(c_ineq[pos_idx]) + 
             norm(c_eq, 1) + 
-            norm(Jt_ineq * λ_ineq_sol + Jt_eq * λ_eq_sol + g, 1)
-
+            norm(Jt_ineq * λ_ineq_sol + Jt_eq * λ_eq_sol + g, 1
+    )
 
     if ρ_sup < -tol
         trow(DomainError(ρ_sup, "test bound ρ_sup is negative"))
@@ -683,10 +726,10 @@ function find_active(nlp, results, method::ActiveMethodLPEC_A)
     active_boundary = Int64[]
     for i in 1:n_ineq
         if c_ineq[i] >= -(β*ρ_sup)^σ - tol
-            if i <= length(allupp_con) + length(alllow_con)
-                !(i in active) && push!(active, indices_to_constraints[i])
+            if i <= n_ineq_con
+                push!(active, indices_to_constraints[i])
             else
-                !(i in active_boundary) && push!(active_boundary, indices_to_constraints[i])
+                push!(active_boundary, indices_to_constraints[i])
             end
         end
     end

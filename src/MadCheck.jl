@@ -6,8 +6,9 @@ import NLPModels
 using JuMP
 
 include("solution.jl")
-include("constraint_qualification.jl")
 include("active_set.jl")
+include("jacobian_degeneracy.jl")
+include("constraint_qualification.jl")
 include("feasibility.jl")
 
 end # module MadCheck
