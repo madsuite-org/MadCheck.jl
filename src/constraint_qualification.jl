@@ -1,5 +1,4 @@
 # TODO add MFCQ
-
 """
     build_work_jacobian(nlp, results, active, active_boundary)
 
@@ -47,7 +46,7 @@ end
 """
     test_LICQ(nlp, results, active_method::AbstractActiveSetMethod, degen_method::AbstractDegenJacMethod)
 
-Tests the LICQ condition at a given point by looking for dependent constraits in the set of active and equality constraints. 
+Tests the LICQ condition at a given point by looking for dependent constraints in the set of active and equality constraints. 
 Takes the following arguments:
 -`nlp`: non linear programming problem studied
 -`results`: Point studied
