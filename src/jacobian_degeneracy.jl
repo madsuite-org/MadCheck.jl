@@ -2,7 +2,7 @@
 """
     AbstractDegenJacMethod
 
-Base type for the different methods implemented for determining sets of degenerate columns in a given Jacobian
+Base type for the different methods implemented for determining sets of degenerate constraints in a given Jacobian
 """
 abstract type AbstractDegenJacMethod end
 
@@ -81,10 +81,10 @@ DegenHunterJac(solver::DataType, M;silent = true, tol = 1e-8, solver_options = (
 """
     find_degenerate(Jac, method::DegenJacSVD)
 
-Finds the dependent columns in the matrice Jac using it's singular value decomposition.
+Finds the dependent rows in the matrice Jac using it's singular value decomposition.
 
 Return
-list of vectors of indices corresponding to dependent sets of columns of Jac
+list of vectors of indices corresponding to dependent sets of rows of Jac
 """
 function find_degenerate(Jac, method::DegenJacSVD)
     n_jac, n = size(Jac)
@@ -119,10 +119,10 @@ end
 """
     find_degenerate(Jac, method::DegenJacQR)
 
-finds m-r columns of that Jac that can be expressed as a linear combination of the other columns (were r is the rank of Jac and m)
+finds m-r rows of that Jac that can be expressed as a linear combination of the others  (were r is the rank of Jac and m)
 
 Return
-list containing one vector: the set of column indices that are dependent on the other columns
+list containing one vector: a set of row indices that are dependent on the other rows
 """
 function find_degenerate(Jac, method::DegenJacQR)
     n_jac, n = size(Jac)
