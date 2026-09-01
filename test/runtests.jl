@@ -44,7 +44,7 @@ end
 end
 
 @testset "Test active set detection" begin
-    nlp = hs15_model()  #TODO Find a better test to verify the methods are working properly - as they are inexact by nature, more over, the primal method can not detect weakly active constraints
+    nlp = hs15_model()
     results = madnlp(nlp; print_level=MadNLP.ERROR)
     
     n = NLPModels.get_nvar(nlp)

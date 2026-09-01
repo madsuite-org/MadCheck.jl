@@ -1,4 +1,3 @@
-# TODO implement Degen Hunter, Qr and maybe dulmage-mendelsohn
 """
     AbstractDegenJacMethod
 
@@ -104,16 +103,16 @@ function find_degenerate(Jac, method::DegenJacSVD)
         r-=1
     end
 
-    list_degen_colums = []
+    list_degen_rows = []
 
     for u in eachcol(U[:, (r+1):n_jac])
-        degen_columns = findall(x -> abs(x)>tol, u)
-        if !(Set(degen_columns) in Set.(list_degen_colums))
-            push!(list_degen_colums, degen_columns)
+        degen_rows = findall(x -> abs(x)>tol, u)
+        if !(Set(degen_rows) in Set.(list_degen_rows))
+            push!(list_degen_rows, degen_rows)
         end
     end
 
-    return list_degen_colums
+    return list_degen_rows
 end
 
 """
@@ -193,7 +192,7 @@ function find_degenerate(Jac, method::DegenHunterJac)
 
         # TODO Find a way to give the user the real constraint, make this a warning?
         if termination_status(model) != OPTIMAL
-            error("For lign $j of the work Jacobian, MILP failed to converge : $(termination_status(model))")
+            error("For line $j of the work Jacobian, MILP failed to converge : $(termination_status(model))")
         end
         
         degen_columns = findall(!iszero, value.(y))

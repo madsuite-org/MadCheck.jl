@@ -441,7 +441,7 @@ function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
     )
 
     sign_con = [(ucon[i] - constraints[i]) > (constraints[i] - lcon[i]) ? -1 : 1 for i in jrng]
-    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in jrng]
+    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in irng]
 
     J_ineq = vcat(Jac[jrng, :] .* sign_con,
                   Jac[jupp, :],
@@ -622,7 +622,7 @@ function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
     )
 
     sign_con = [(ucon[i] - constraints[i]) > (constraints[i] - lcon[i]) ? -1 : 1 for i in jrng]
-    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in jrng]
+    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in irng]
 
     J_ineq = vcat(Jac[jrng, :] .* sign_con,
                   Jac[jupp, :],

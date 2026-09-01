@@ -2,12 +2,12 @@
 """
     build_work_jacobian(nlp, results, active, active_boundary)
 
-Create the jacobian the method is working on based on what active set wants to be used (i.e. active = [] and active_boundary = [] for MFCQ). This jacobian can then be given to methods in jacobian_degeneracy for analysis. 
+Create the jacobian the method is working on based on what active set wants to be used (i.e. active = [] and active_boundary = [] for MFCQ). This jacobian can then be given to methods in jacobian_degeneracy and MFCQ_direction_condition for analysis. 
 We set the sign convention c(x) <= 0 for use in MFCQ. 
 
 Return
 -`J_work`: Constructed jacobian
--`indices_to_constraints`: vector mapping the indices of the columns of `J_work` to the constraints indices, the first part of it maps to usual constraints, the second to bound contraints.
+-`indices_to_constraints`: vector mapping the indices of the columns of `J_work` to the constraints indices, the vector used the order jfix, ifix, active, active_boundary which can be used to separate usual constraints and boundary constraints.
 """
 function build_work_jacobian(nlp, results, active, active_boundary)
     n = NLPModels.get_nvar(nlp)
@@ -33,12 +33,12 @@ function build_work_jacobian(nlp, results, active, active_boundary)
 
     J_work = vcat(
         J[jfix, :],
-        J[active, :] .* sign,
         spdiagm(ones(n))[ifix, :],
+        J[active, :] .* sign,
         spdiagm(ones(n))[active_boundary, :] .* sign_boundary,
     )
 
-    indices_to_constraints = vcat(jfix, active, ifix, active_boundary)
+    indices_to_constraints = vcat(jfix, ifix, active, active_boundary)
 
     return J_work, indices_to_constraints
 end
@@ -70,12 +70,16 @@ function test_LICQ(
 
     # Return
     rep = []
-    n_work_con = length(nlp.meta.jfix) + length(active)
+
+    n_jfix = length(nlp.meta.jfix)
+    n_ifix = length(nlp.meta.ifix)
+    n_a = length(active)
+
     for degen_cons in list_degen_cons
         cons = []
         bounds = []
         for i in degen_cons
-            if i <= n_work_con
+            if i <= n_jfix || n_jfix + n_ifix + 1 <= i <= n_jfix + n_ifix + n_a 
                 push!(cons, indices_to_constraints[i])
             else
                 push!(bounds, indices_to_constraints[i])
