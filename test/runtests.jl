@@ -46,7 +46,7 @@ end
 @testset "Test active set detection" begin
     nlp = hs15_model()
     results = madnlp(nlp; print_level=MadNLP.ERROR)
-    
+
     n = NLPModels.get_nvar(nlp)
 
     Random.seed!(20)

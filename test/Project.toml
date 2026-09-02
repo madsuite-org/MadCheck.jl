@@ -5,5 +5,7 @@ MadNLP = "2621e9c9-9eb4-46b1-8089-e8c72242dfb6"
 NLPModels = "a4795742-8479-5a88-8948-cc11e1c8c1a6"
 NLPModelsJuMP = "792afdf1-32c1-5681-94e0-d7bf7a5df49e"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+<<<<<<< HEAD
 HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"

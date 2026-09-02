@@ -8,7 +8,7 @@ abstract type AbstractDegenJacMethod end
 """
     DegenJacSVD <: AbstractDegenJacMethod
 
-Composite type for the method based on the singular value decomposition, 
+Composite type for the method based on the singular value decomposition,
 contains one parameter
 -`tol`: tolerance of the method
 """
@@ -52,7 +52,7 @@ Contains the following parameters:
 -`tol`: tolerance of the method
 -`solver`: solver used for the MILP subproblems solved in the method
 -`solver_options`: additional JuMP options to be given to the solver)
--`M`: big M-value used for the MILP (see [DowlingandBiegler-2015](@cite)) 
+-`M`: big M-value used for the MILP (see [DowlingandBiegler-2015](@cite))
 
 Reference:
 [DowlingandBiegler-2015] Dowling and Giegler - 2015 - Degeneracy Hunter: An Algorithm for Determining Irreducible Sets of Degenerate Constraints in Mathematical Programs
@@ -126,7 +126,7 @@ list containing one vector: a set of row indices that are dependent on the other
 function find_degenerate(Jac, method::DegenJacQR)
     n_jac, n = size(Jac)
     tol = method.tol
-    
+
     Jac_t = transpose(Jac)
 
     QR_Jac_t = qr(Jac_t)
@@ -158,7 +158,7 @@ Reference:
 """
 function find_degenerate(Jac, method::DegenHunterJac)
     n_jac, n = size(Jac)
-    
+
     Jac_t = transpose(Jac)
 
     degenerate_idx = find_degenerate(Jac, DegenJacQR(tol = method.tol))[1]
@@ -171,11 +171,11 @@ function find_degenerate(Jac, method::DegenHunterJac)
     irreducible_sets = []
     for j in degenerate_idx
 
-        model = Model(optimizer_with_attributes(method.solver,  method.solver_options...)) 
+        model = Model(optimizer_with_attributes(method.solver,  method.solver_options...))
 
         if method.silent
             set_silent(model)
-        end        
+        end
 
         @variable(model, y[1:n_jac], Bin)
         @variable(model, λ[1:n_jac])
@@ -194,7 +194,7 @@ function find_degenerate(Jac, method::DegenHunterJac)
         if termination_status(model) != OPTIMAL
             error("For line $j of the work Jacobian, MILP failed to converge : $(termination_status(model))")
         end
-        
+
         degen_columns = findall(!iszero, value.(y))
 
         if !(Set(degen_columns) in Set.(irreducible_sets))

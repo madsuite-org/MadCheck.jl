@@ -2,8 +2,8 @@
 """
     build_work_jacobian(nlp, results, active, active_boundary)
 
-Create the jacobian the method is working on based on what active set wants to be used (i.e. active = [] and active_boundary = [] for MFCQ). This jacobian can then be given to methods in jacobian_degeneracy and MFCQ_direction_condition for analysis. 
-We set the sign convention c(x) <= 0 for use in MFCQ. 
+Create the jacobian the method is working on based on what active set wants to be used (i.e. active = [] and active_boundary = [] for MFCQ). This jacobian can then be given to methods in jacobian_degeneracy and MFCQ_direction_condition for analysis.
+We set the sign convention c(x) <= 0 for use in MFCQ.
 
 Return
 -`J_work`: Constructed jacobian
@@ -46,7 +46,7 @@ end
 """
     test_LICQ(nlp, results, active_method::AbstractActiveSetMethod, degen_method::AbstractDegenJacMethod)
 
-Tests the LICQ condition at a given point by looking for dependent constraints in the set of active and equality constraints. 
+Tests the LICQ condition at a given point by looking for dependent constraints in the set of active and equality constraints.
 Takes the following arguments:
 -`nlp`: non linear programming problem studied
 -`results`: Point studied
@@ -79,7 +79,7 @@ function test_LICQ(
         cons = []
         bounds = []
         for i in degen_cons
-            if i <= n_jfix || n_jfix + n_ifix + 1 <= i <= n_jfix + n_ifix + n_a 
+            if i <= n_jfix || n_jfix + n_ifix + 1 <= i <= n_jfix + n_ifix + n_a
                 push!(cons, indices_to_constraints[i])
             else
                 push!(bounds, indices_to_constraints[i])
