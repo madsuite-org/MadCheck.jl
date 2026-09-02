@@ -41,3 +41,18 @@ function degen_30303_model()
     @constraint(model, -x[1]*x[2] - (x[1] + x[2] + x[3] - 1)*(x[1] + x[2] - x[3] - 1) >= 0)
     return MathOptNLPModel(model)
 end
+
+function degen_scs_1_model()
+    model = Model()
+    @variable(model, x >= 0)
+    @objective(model, Min, x^2)
+    return MathOptNLPModel(model)
+end
+
+function degen_scs_2_model()
+    model = Model()
+    @variable(model, x)
+    @objective(model, Min, x^2)
+    @constraint(model, -x <= 0.0)
+    return MathOptNLPModel(model)
+end

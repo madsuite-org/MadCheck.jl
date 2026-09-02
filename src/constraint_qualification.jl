@@ -44,9 +44,9 @@ function build_work_jacobian(nlp, results, active, active_boundary)
 end
 
 """
-    test_LICQ(nlp, results, active_method::AbstractActiveSetMethod, degen_method::AbstractDegenJacMethod)
+    check_LICQ(nlp, results, active_method::AbstractActiveSetMethod, degen_method::AbstractDegenJacMethod)
 
-Tests the LICQ condition at a given point by looking for dependent constraints in the set of active and equality constraints.
+Check the LICQ condition at a given point by looking for dependent constraints in the set of active and equality constraints.
 Takes the following arguments:
 -`nlp`: non linear programming problem studied
 -`results`: Point studied
@@ -55,7 +55,7 @@ Takes the following arguments:
 
 Returns a list of named tuples with 2 fields: `constraints` and `bounds` corresponding to a set of dependent constraints/bounds.
 """
-function test_LICQ(
+function check_LICQ(
     nlp,
     results,
     active_method::AbstractActiveSetMethod,
@@ -91,3 +91,50 @@ function test_LICQ(
 
     return rep
 end
+
+
+"""
+    check_SCS(nlp, results, tol)
+
+Check the SCS condition at a given point for bound and generic constraints.
+
+Takes the following arguments:
+- `nlp::AbstractNLPModel`: non linear programming problem studied
+- `results`: Point studied
+- `tol::Float64`
+
+Returns a list of named tuples with 2 fields: `constraints` and `bounds` corresponding to a set of dependent constraints/bounds.
+"""
+function check_SCS(nlp::NLPModels.AbstractNLPModel, results, tol::Float64)
+    n = NLPModels.get_nvar(nlp)
+    m = NLPModels.get_ncon(nlp)
+    x = results.solution
+    c = results.constraints
+    y = results.multipliers
+    zl = results.multipliers_L
+    zu = results.multipliers_U
+    xl, xu = NLPModels.get_lvar(nlp), NLPModels.get_uvar(nlp)
+    cl, cu = NLPModels.get_lcon(nlp), NLPModels.get_ucon(nlp)
+
+    # Check bound constraints
+    index_bounds = Int[]
+    for i in 1:n
+        if min(x[i] - xl[i], zl[i]) >= tol || min(xu[i] - x[i], zu[i]) >= tol
+            push!(index_bounds, i)
+        end
+    end
+
+    # Check generic constraints
+    index_constraints = Int[]
+    for i in 1:m
+        if (cl[i] < cu[i]) && (min(c[i] - cl[i], -y[i]) >= tol || min(cu[i] - c[i], y[i]) >= tol)
+            push!(index_constraints, i)
+        end
+    end
+
+    return (
+        constraints=index_constraints,
+        bounds=index_bounds,
+    )
+end
+
