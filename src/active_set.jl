@@ -8,7 +8,7 @@ abstract type AbstractActiveSetMethod end
 """
     BasicActiveSet <: AbstractActiveSetMethod
 
-Composite type for the basic method consisting of runing the test c(x) = 0, 
+Composite type for the basic method consisting of runing the test c(x) = 0,
 contains one parameter
     `tol`: tolerance of the method
 """
@@ -79,7 +79,6 @@ Contains the following fields:
 [OberlinandWright-2006] Oberlin and Wright - 2006 - Active Set Identification in Nonlinear Programming
 
 """
-
 struct PrimalDualActiveSetLPEC <: AbstractActiveSetMethod
     silent::Bool
     tol::Float64
@@ -102,7 +101,6 @@ The following default values are set:
 -`β`: NaN wich is replaced by 1/(m+n) when the associated find_active() is used, with n the number of variables and m of constraints
 -`σ`: 0.75
 """
-
 PrimalDualActiveSetLPEC(solver::DataType ;silent = true, tol = 1e-8, solver_options = (), M = NaN, β = NaN, σ = 0.75) = PrimalDualActiveSetLPEC(silent, tol, solver, solver_options, M, β, σ)
 
 """
@@ -132,7 +130,7 @@ struct ApproximatePrimalDualActiveSetLPEC <: AbstractActiveSetMethod
 end
 
 """
-ApproximatePrimalDualActiveSetLPEC(linear_program_solver; kwargs...)
+    ApproximatePrimalDualActiveSetLPEC(linear_program_solver; kwargs...)
 
 Create an ApproximatePrimalDualActiveSetLPEC where all fields can be specified as keyword arguments, linear_program_solver must be provided.
 The following default values are set:
@@ -142,13 +140,12 @@ The following default values are set:
 -`β`: NaN wich is replaced by 1/(m+n) when the associated find_active() is used, with n the number of variables and m of constraints
 -`σ`: 0.90
 """
-
 ApproximatePrimalDualActiveSetLPEC(linear_program_solver::DataType ;silent = true, tol = 1e-8, solver_options = (), β = NaN, σ = 0.90) = ApproximatePrimalDualActiveSetLPEC(silent, tol, linear_program_solver, solver_options, β, σ)
 
 
 """
     find_active(nlp, results, method::BasicActiveSet)
-0
+
 Find the active inequality constraints ``c_i`` matching their lower-bound (``c_i(x) = lb_i``) or their upper-bound (``c_i(x) = ub_i``) at the current solution ``x`` store in `results.solution`
 
 Returns named tuple with 2 attributes:
@@ -246,7 +243,7 @@ function find_active(nlp, results, method::PrimalActiveSetLP)
 
     constraints = NLPModels.cons(nlp, x)
 
-    g = NLPModels.grad(nlp, x) 
+    g = NLPModels.grad(nlp, x)
 
     # Creating equality and inequality constraints and gradients in the right format
     c_eq = vcat(constraints[jfix] - ucon[jfix], x[ifix] - uvar[ifix])
@@ -327,7 +324,7 @@ function find_active(nlp, results, method::PrimalActiveSetLP)
 
     if n_ineq != 0
         @variable(model,  r[1:n_ineq] >= 0)
-        
+
         for i in 1:n_ineq
             if isfinite(u[i])
                 @constraint(model, J_ineq[i,:]' * d + c_ineq[i] <= u[i] + r[i])
@@ -341,12 +338,12 @@ function find_active(nlp, results, method::PrimalActiveSetLP)
     else
         @expression(model, slackCost_eq, 0.)
     end
-    
+
     @objective(model, Min, dot(g,d) + slackCost_eq + slackCost_ineq)
 
     optimize!(model)
 
-    if termination_status(model) != OPTIMAL 
+    if termination_status(model) != OPTIMAL
         error("LP subproblem failed to converge : $(termination_status(model))")
     end
 
@@ -358,7 +355,7 @@ function find_active(nlp, results, method::PrimalActiveSetLP)
     active_boundary = Int64[]
 
     for i in 1:n_ineq
-        if dot(J_ineq[i, :], d_sol) + c_ineq[i] >= u[i] - tol || dot(J_ineq[i, :], d_sol) + c_ineq[i] <= l[i] + tol 
+        if dot(J_ineq[i, :], d_sol) + c_ineq[i] >= u[i] - tol || dot(J_ineq[i, :], d_sol) + c_ineq[i] <= l[i] + tol
             if i <= n_ineq_con
                 push!(active, indices_to_constraints[i])
             else
@@ -373,7 +370,6 @@ end
 
 """
     find_active(nlp, results, method::PrimalDualActiveSetLPEC)
-
 
 Implements the method based on the primal-dual estimate presented in [OberlinandWright-2006](@cite). For finding the active set at a solution with results being a point near the solution.
 
@@ -414,7 +410,7 @@ function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
     x = results.solution
 
     y = results.multipliers
-    zl = results.multipliers_L    
+    zl = results.multipliers_L
     zu = results.multipliers_U
 
     Ji, Jj = NLPModels.jac_structure(nlp)
@@ -441,7 +437,7 @@ function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
     )
 
     sign_con = [(ucon[i] - constraints[i]) > (constraints[i] - lcon[i]) ? -1 : 1 for i in jrng]
-    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in jrng]
+    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in irng]
 
     J_ineq = vcat(Jac[jrng, :] .* sign_con,
                   Jac[jupp, :],
@@ -480,7 +476,7 @@ function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
     if σ <= 0 || σ >=1
         throw(DomainError(σ, "σ must be in (0,1)"))
     end
- 
+
 
     # Sub problem resolution
     model = Model(optimizer_with_attributes(method.solver,  method.solver_options...))
@@ -517,12 +513,12 @@ function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
     end
 
     @constraint(model, Jtprod_eq + Jtprod_ineq + g == u - v)
-    
+
     @objective(model, Min, slackCost + sum(u) + sum(v))
 
     optimize!(model)
 
-    if termination_status(model) != OPTIMAL 
+    if termination_status(model) != OPTIMAL
         error("LP subproblem failed to converge : $(termination_status(model))")
     end
 
@@ -595,7 +591,7 @@ function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
 
     x = results.solution
     y = results.multipliers
-    zl = results.multipliers_L    
+    zl = results.multipliers_L
     zu = results.multipliers_U
 
     Ji, Jj = NLPModels.jac_structure(nlp)
@@ -622,7 +618,7 @@ function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
     )
 
     sign_con = [(ucon[i] - constraints[i]) > (constraints[i] - lcon[i]) ? -1 : 1 for i in jrng]
-    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in jrng]
+    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in irng]
 
     J_ineq = vcat(Jac[jrng, :] .* sign_con,
                   Jac[jupp, :],
@@ -657,7 +653,7 @@ function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
     if σ <= 0 || σ >=1
         throw(DomainError(σ, "σ must be in (0,1)"))
     end
-    
+
     # Sub problem resolution
     model = Model(optimizer_with_attributes(method.linear_program_solver,  method.solver_options...))
 
@@ -687,12 +683,12 @@ function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
     end
 
     @constraint(model, Jtprod_eq + Jtprod_ineq + g == u - v)
-    
+
     @objective(model, Min, ineqCost + sum(u) + sum(v))
 
     optimize!(model)
 
-    if termination_status(model) != OPTIMAL 
+    if termination_status(model) != OPTIMAL
         error("LP subproblem failed to converge : $(termination_status(model))")
     end
 
@@ -710,8 +706,8 @@ function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
 
     #TODO find a better solution than clamp() to ensure ρ_sup is positive (under tol)
     ρ_sup = sum(clamp(-c_ineq[i] * λ_ineq_sol[i], 0., Inf)^(1/2) for i in neg_idx; init=0.) +
-            sum(c_ineq[pos_idx]) + 
-            norm(c_eq, 1) + 
+            sum(c_ineq[pos_idx]) +
+            norm(c_eq, 1) +
             norm(Jt_ineq * λ_ineq_sol + Jt_eq * λ_eq_sol + g, 1
     )
 
