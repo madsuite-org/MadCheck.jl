@@ -23,16 +23,16 @@ end
     nlp = degenerate_bt4_model()
     results = madnlp(nlp; print_level=MadNLP.ERROR)
 
-    SVD_degen_cons_bt4 = MadCheck.test_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacSVD())
-    QR_degen_cons_bt4 = MadCheck.test_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacQR())
-    DH_degen_cons_bt4 = MadCheck.test_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenHunterJac(HiGHS.Optimizer, 1e4))
+    SVD_degen_cons_bt4 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacSVD())
+    QR_degen_cons_bt4 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacQR())
+    DH_degen_cons_bt4 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenHunterJac(HiGHS.Optimizer, 1e4))
 
     nlp = degen_30303_model()
     results = madnlp(nlp; print_level=MadNLP.ERROR)
 
-    SVD_degen_cons_30303 = MadCheck.test_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacSVD())
-    QR_degen_cons_30303 = MadCheck.test_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacQR())
-    DH_degen_cons_30303 = MadCheck.test_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenHunterJac(HiGHS.Optimizer, 1e4))
+    SVD_degen_cons_30303 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacSVD())
+    QR_degen_cons_30303 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacQR())
+    DH_degen_cons_30303 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenHunterJac(HiGHS.Optimizer, 1e4))
 
     @test SVD_degen_cons_bt4 == [(constraints = [2, 3], bounds = [])]
     @test QR_degen_cons_bt4 == [(constraints = [3], bounds = [])] ||  QR_degen_cons_bt4 == [(constraints = [2], bounds = [])]
@@ -41,6 +41,21 @@ end
     @test SVD_degen_cons_30303 == [(constraints = [2, 3], bounds = [])]
     @test QR_degen_cons_30303 == [(constraints = [3], bounds = [])] ||  QR_degen_cons_30303 == [(constraints = [2], bounds = [])]
     @test DH_degen_cons_30303 == [(constraints = [2, 3], bounds = [])]
+end
+
+@testset "Test SCS verification" begin
+    tol = 1e-7
+    # Degenerate case
+    for nlp in [degen_scs_1_model(), degen_scs_2_model()]
+        results = madnlp(nlp; print_level=MadNLP.ERROR)
+        chk = MadCheck.check_SCS(nlp, results, tol)
+        @test length(chk.bounds) + length(chk.constraints) > 0
+    end
+    # Regular case
+    nlp = hs15_model()
+    results = madnlp(nlp; print_level=MadNLP.ERROR)
+    chk = MadCheck.check_SCS(nlp, results, tol)
+    @test length(chk.bounds) + length(chk.constraints) == 0
 end
 
 @testset "Test active set detection" begin
