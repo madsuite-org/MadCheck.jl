@@ -8,6 +8,7 @@ using JuMP
 include("solution.jl")
 include("active_set.jl")
 include("jacobian_degeneracy.jl")
+include("MFCQ_direction_condition.jl")
 include("constraint_qualification.jl")
 include("feasibility.jl")
 
