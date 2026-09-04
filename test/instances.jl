@@ -4,14 +4,37 @@ using NLPModelsJuMP
 
 function hs15_model()
     model = Model()
-    x0 = [-2, 1]
     uvar = [0.5, Inf]
+    x0 = [-2, 1]
     @variable(model, x[i = 1:2] <= uvar[i], start = x0[i])
     @objective(model, Min, 100 * (x[2] - x[1]^2)^2 + (1 - x[1])^2)
     @constraint(model, x[1] * x[2] - 1 ≥ 0)
     @constraint(model, x[1] + x[2]^2 ≥ 0)
     return MathOptNLPModel(model)
 end
+
+function hs15_model_no_start()
+    model = Model()
+    uvar = [0.5, Inf]
+    @variable(model, x[i = 1:2] <= uvar[i])
+    @objective(model, Min, 100 * (x[2] - x[1]^2)^2 + (1 - x[1])^2)
+    @constraint(model, x[1] * x[2] - 1 ≥ 0)
+    @constraint(model, x[1] + x[2]^2 ≥ 0)
+    return MathOptNLPModel(model)
+end
+
+function unfeasable_hs15_model()
+    model = Model()
+    uvar = [0.5, Inf]
+    @variable(model, x[i = 1:2] <= uvar[i])
+    @objective(model, Min, 100 * (x[2] - x[1]^2)^2 + (1 - x[1])^2)
+    @constraint(model, x[1] * x[2] - 1 ≥ 0)
+    @constraint(model, x[1] + x[2]^2 ≥ 0)
+    @constraint(model, x[1] * x[2] <= 0)
+    return MathOptNLPModel(model)
+end
+
+
 
 function degenerate_bt4_model()
     x0 = [

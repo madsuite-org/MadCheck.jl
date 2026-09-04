@@ -86,8 +86,8 @@ function FeasL1Model(nlp::NLPModels.AbstractNLPModel{T, S}) where {T, S}
         nx + nr;
         lvar = lvar,
         uvar = vcat(nlp.meta.uvar, fill!(similar(nlp.meta.x0, nr), Inf)),
-        x0 = vcat(nlp.meta.x0, fill!(similar(nlp.meta.x0, nr), 1)),
-        y0 = vcat(nlp.meta.y0, fill!(similar(nlp.meta.y0, nrng), 1)),
+        x0 = vcat(nlp.meta.x0, fill!(similar(nlp.meta.x0, nr), 1.0)),
+        y0 = vcat(nlp.meta.y0, fill!(similar(nlp.meta.y0, nrng), 1.0)),
         name = "FeasL1-" * nlp.meta.name,
         nnzj = nlp.meta.nnzj + nnzj_rng + ncon,
         nnzh = nlp.meta.nnzh,

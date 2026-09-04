@@ -4,6 +4,7 @@ using LinearAlgebra
 using SparseArrays
 import NLPModels
 using JuMP
+using NLPModelsModifiers
 
 include("solution.jl")
 include("active_set.jl")
