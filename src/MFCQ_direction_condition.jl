@@ -37,6 +37,38 @@ The following default values are set
 MFCQDirectionPrimal(linear_program_solver::DataType;silent = true, tol = 1e-8, solver_options = (), K = 1) = MFCQDirectionPrimal(silent, tol, linear_program_solver, solver_options, K)
 
 """
+    MFCQDirectionDual <: AbstractMFCQDirectionMethod
+
+Composite type for the method based on using a Max L1 problem in a Big-M MILP formulation to solve the dual formulation of the direction condition, 
+Contains the following parameters:
+-`silent`: bool setting the optimization solver used to silent (true) or not (false)
+-`tol`: tolerance of the method
+-`solver`: solver used for the Big-M MILP subproblem solved in the method
+-`solver_options`: additional JuMP options to be given to the solver
+-`K`: Upper bound on the solution to avoid having the optimal value be infinite if a non zero solution exist, 2*K is used as the Big-M value
+"""
+struct MFCQDirectionDual <: AbstractMFCQDirectionMethod
+    silent::Bool
+    tol::Float64
+    solver::DataType
+    solver_options::Tuple{Vararg{Pair}}
+    K::Float64
+end
+
+"""
+    MFCQDirectionDual(solver; kwargs...)
+
+Create an MFCQDirectionDual where all fields can be specified as keyword arguments, a MILP solver must be provided.
+The following default values are set
+-`silent`: true
+-`tol`: 1e-8
+-`solver_options`: () i.e. none
+-`K`: 1
+"""
+MFCQDirectionDual(solver::DataType;silent = true, tol = 1e-8, solver_options = (), K = 1) = MFCQDirectionDual(silent, tol, solver, solver_options, K)
+
+
+"""
     check_MFCQ_direction(Jac, n_eq, method::MFCQDirectionPrimal)
 
 Solves the problem
@@ -109,37 +141,6 @@ function check_MFCQ_direction(Jac, n_eq, method::MFCQDirectionPrimal)
     return (direction = d_sol, slack = t_sol)   # TODO Smarter more compact return ?
 end
 
-
-"""
-    MFCQDirectionDual <: AbstractMFCQDirectionMethod
-
-Composite type for the method based on using a Max L1 problem in a Big-M MILP formulation to solve the dual formulation of the direction condition, 
-Contains the following parameters:
--`silent`: bool setting the optimization solver used to silent (true) or not (false)
--`tol`: tolerance of the method
--`solver`: solver used for the Big-M MILP subproblem solved in the method
--`solver_options`: additional JuMP options to be given to the solver
--`K`: Upper bound on the solution to avoid having the optimal value be infinite if a non zero solution exist, 2*K is used as the Big-M value
-"""
-struct MFCQDirectionDual <: AbstractMFCQDirectionMethod
-    silent::Bool
-    tol::Float64
-    solver::DataType
-    solver_options::Tuple{Vararg{Pair}}
-    K::Float64
-end
-
-"""
-    MFCQDirectionDual(solver; kwargs...)
-
-Create an MFCQDirectionDual where all fields can be specified as keyword arguments, a MILP solver must be provided.
-The following default values are set
--`silent`: true
--`tol`: 1e-8
--`solver_options`: () i.e. none
--`K`: 1
-"""
-MFCQDirectionDual(solver::DataType;silent = true, tol = 1e-8, solver_options = (), K = 1) = MFCQDirectionDual(silent, tol, solver, solver_options, K)
 
 """
     check_MFCQ_direction(Jac, n_eq, method::MFCQDirectionDual)
