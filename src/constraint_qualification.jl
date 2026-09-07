@@ -118,7 +118,7 @@ function check_SCS(nlp::NLPModels.AbstractNLPModel, results, tol::Float64)
 
     # Check bound constraints
     index_bounds = Int[]
-    for i in 1:n
+    for i = 1:n
         if min(x[i] - xl[i], zl[i]) >= tol || min(xu[i] - x[i], zu[i]) >= tol
             push!(index_bounds, i)
         end
@@ -126,15 +126,73 @@ function check_SCS(nlp::NLPModels.AbstractNLPModel, results, tol::Float64)
 
     # Check generic constraints
     index_constraints = Int[]
-    for i in 1:m
-        if (cl[i] < cu[i]) && (min(c[i] - cl[i], -y[i]) >= tol || min(cu[i] - c[i], y[i]) >= tol)
+    for i = 1:m
+        if (cl[i] < cu[i]) &&
+           (min(c[i] - cl[i], -y[i]) >= tol || min(cu[i] - c[i], y[i]) >= tol)
             push!(index_constraints, i)
         end
     end
 
-    return (
-        constraints=index_constraints,
-        bounds=index_bounds,
-    )
+    return (constraints = index_constraints, bounds = index_bounds)
 end
 
+"""
+    check_dulmage_mendelsohn(nlp, results, active_method)
+
+Computes the equality and active jacobian at results, then creates the factor graph between constraints and variables by using the jacobian to determine if a given constraint depends on a given variable. Then applies the Dulmage-Mendelsohn decomposition [DulmageandMendelsohn-1958](@cite) to the factor graph, this method is based on the paper [Dulmage-Mendelsohn_method-2023](@cite). The given tolerance is used to decide if a value in the jacobian is zero.
+
+Return
+A named tuple with three fields `variables`, `constraints` and `bounds`,
+Each are a named tuple with the folowing fields:
+-`oc`: Overconstrained elements
+-`uc`: Underconstrained elements
+-`sq`: Well defined elements (square set)
+
+References:
+[DulmageandMendelsohn-1958] Dulage and Mendelsohn - 1958 - Coverings of Bipartite Graphs
+
+[Dulmage-Mendelsohn_method-2023] Parker, Nicholson, Siirola, Biegler - 2023 - Applications of the Dulmage–Mendelsohn decomposition for debugging
+nonlinear optimization problems
+"""
+function check_dulmage_mendelsohn(
+    nlp,
+    results,
+    active_method::AbstractActiveSetMethod,
+    tol::Float64,
+)
+    active, active_boundary = find_active(nlp, results, active_method)
+
+    Jac, indices_to_constraints = build_work_jacobian(nlp, results, active, active_boundary)
+    n_jac, n = size(Jac)
+    A = collect(1:n)
+    B = collect(1:n_jac)
+    E = Tuple{Int64,Int64}[]
+
+    for i = 1:n, j = 1:n_jac
+        if abs(Jac[j, i]) > tol
+            push!(E, (i, j))
+        end
+    end
+
+    n_jfix = length(nlp.meta.jfix)
+    n_ifix = length(nlp.meta.ifix)
+    n_a = length(active)
+
+    dm_var, dm_con = dulmage_mendelsohn(A, B, E)
+
+    iscon(x) = x <= n_jfix || n_jfix + n_ifix + 1 <= x <= n_jfix + n_ifix + n_a
+
+    dm_con_rep = (
+        oc = indices_to_constraints[filter(iscon, dm_con.oc)],
+        uc = indices_to_constraints[filter(iscon, dm_con.uc)],
+        sq = indices_to_constraints[filter(iscon, dm_con.sq)],
+    )
+
+    dm_bound_rep = (
+        oc = indices_to_constraints[filter(!iscon, dm_con.oc)],
+        uc = indices_to_constraints[filter(!iscon, dm_con.uc)],
+        sq = indices_to_constraints[filter(!iscon, dm_con.sq)],
+    )
+
+    return (variables = dm_var, constraints = dm_con_rep, bounds = dm_bound_rep)
+end

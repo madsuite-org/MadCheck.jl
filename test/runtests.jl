@@ -45,8 +45,37 @@ end
     @test SVD_degen_cons_30303 == [(constraints = [2, 3], bounds = [])]
     @test QR_degen_cons_30303 == [(constraints = [3], bounds = [])] ||  QR_degen_cons_30303 == [(constraints = [2], bounds = [])]
     @test DH_degen_cons_30303 == [(constraints = [2, 3], bounds = [])]
-    println(DM_degen_cons_30303)
     @test Set(DM_degen_cons_30303[1].constraints) == Set([2,3]) && Set(DM_degen_cons_30303[1].bounds) == Set([1,2])
+end
+
+@testset "Test check_dulmage_mendelsohn" begin
+    nlp = degenerate_bt4_model()
+    results = madnlp(nlp; print_level=MadNLP.ERROR)
+
+    dm_bt4 = MadCheck.check_dulmage_mendelsohn(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), 1e-8)
+    
+    nlp = degen_30303_model()
+    results = madnlp(nlp; print_level=MadNLP.ERROR)
+
+    dm_30303 = MadCheck.check_dulmage_mendelsohn(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), 1e-8)
+
+    @test dm_bt4.variables.oc == [] &&
+        dm_bt4.variables.uc == [] &&
+        Set(dm_bt4.variables.sq) == Set([1, 2, 3]) &&
+        dm_bt4.constraints.oc == [] &&
+        dm_bt4.constraints.uc == [] &&
+        Set(dm_bt4.constraints.sq) == Set([1, 2, 3]) &&
+        dm_bt4.bounds == (oc = [], uc = [], sq = [])
+
+    @test Set(dm_30303.variables.oc) == Set([1, 2, 3]) &&
+        dm_30303.variables.uc == [] &&
+        dm_30303.variables.sq == [] &&
+        Set(dm_30303.constraints.oc) == Set([2, 3]) &&
+        dm_30303.constraints.uc == [] &&
+        dm_30303.constraints.sq == [] &&
+        Set(dm_30303.bounds.oc) == Set([1, 2]) &&
+        dm_30303.bounds.uc == [] &&
+        dm_30303.bounds.sq == []
 end
 
 @testset "Test SCS verification" begin
