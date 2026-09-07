@@ -123,6 +123,10 @@ function check_MFCQ(
     n_a = length(active)
     n_ab = length(active_boundary)
 
+    if n_a + n_ab == 0
+        @warn "No active constraints found; consider using check_LICQ instead"
+    end
+    
     Jac, indices_to_constraints_dir = build_work_jacobian(nlp, results, active, active_boundary)
 
     direction_return = check_MFCQ_direction(Jac, n_jfix + n_ifix, direction_method)    # TODO Smarter more general return ?

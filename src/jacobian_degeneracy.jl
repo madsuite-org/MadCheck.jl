@@ -86,7 +86,7 @@ Return
 list of vectors of indices corresponding to dependent sets of rows of Jac
 """
 function find_degenerate(Jac, method::DegenJacSVD)
-    if isempty(Jac)
+    if iszero(Jac)
         return []
     end
 

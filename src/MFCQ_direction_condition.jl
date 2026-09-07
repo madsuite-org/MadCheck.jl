@@ -119,6 +119,7 @@ function check_MFCQ_direction(Jac, n_eq, method::MFCQDirectionPrimal)
 
         @expression(model, obj_term, sum(t))
     else
+        @warn "M"
         @expression(model, obj_term, 0.)
     end
 
