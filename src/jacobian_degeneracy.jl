@@ -78,6 +78,29 @@ DegenHunterJac(solver::DataType, M;silent = true, tol = 1e-8, solver_options = (
 
 
 """
+    DegenJacDulmageMendelsohn <: AbstractDegenJacMethod
+
+Composite type for the method based on Dulmage-Mendelsohn decomposition as presented in [Dulmage-Mendelsohn_method-2023](@cite),
+contains one parameter:
+-`tol`: tolerance of the method
+
+Reference:
+[Dulmage-Mendelsohn_method-2023] Parker, Nicholson, Siirola, Biegler - 2023 - Applications of the Dulmage–Mendelsohn decomposition for debugging
+nonlinear optimization problems
+"""
+struct DegenJacDulmageMendelsohn <: AbstractDegenJacMethod
+    tol::Float64
+end
+
+"""
+    DegenJacDulmageMendelsohn(; kwargs...)
+
+Creates an DegenJacDulmageMendelsohn with `tol` = 1e-8.
+"""
+DegenJacDulmageMendelsohn(; tol = 1e-8) = DegenJacDulmageMendelsohn(tol)
+
+
+"""
     find_degenerate(Jac, method::DegenJacSVD)
 
 Finds the dependent rows in the matrice Jac using it's singular value decomposition.
@@ -203,4 +226,38 @@ function find_degenerate(Jac, method::DegenHunterJac)
     end
 
     return irreducible_sets
+end
+
+
+"""
+    find_degenerate(Jac, method::DegenJacDulmageMendelsohn)
+
+Creates the factor graph between constraints and variables by using the jacobian to determine if a given constraint depends on a given variable. Then applies the Dulmage-Mendelsohn decomposition [DulmageandMendelsohn-1958](@cite) to the factor graph, this method is based on the paper [Dulmage-Mendelsohn_method-2023](@cite).
+
+Return
+The constraints in the overconstrained set (see [Dulmage-Mendelsohn_method-2023](@cite))
+
+References:
+[DulmageandMendelsohn-1958] Dulage and Mendelsohn - 1958 - Coverings of Bipartite Graphs
+
+[Dulmage-Mendelsohn_method-2023] Parker, Nicholson, Siirola, Biegler - 2023 - Applications of the Dulmage–Mendelsohn decomposition for debugging
+nonlinear optimization problems
+"""
+function find_degenerate(Jac, method::DegenJacDulmageMendelsohn)
+    n_jac, n = size(Jac)
+    tol = method.tol
+
+    A = collect(1:n)
+    B = collect(1:n_jac)
+    E = Tuple{Int64, Int64}[]
+    
+    for i in 1:n, j in 1:n_jac
+        if abs(Jac[j, i]) > tol
+            push!(E, (i, j))
+        end
+    end
+
+    dm_var, dm_con = dulmage_mendelsohn(A, B, E)
+
+    return [dm_con.oc]
 end

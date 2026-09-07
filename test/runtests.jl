@@ -26,6 +26,7 @@ end
     SVD_degen_cons_bt4 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacSVD())
     QR_degen_cons_bt4 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacQR())
     DH_degen_cons_bt4 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenHunterJac(HiGHS.Optimizer, 1e4))
+    DM_degen_cons_bt4 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacDulmageMendelsohn())
 
     nlp = degen_30303_model()
     results = madnlp(nlp; print_level=MadNLP.ERROR)
@@ -33,14 +34,19 @@ end
     SVD_degen_cons_30303 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacSVD())
     QR_degen_cons_30303 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacQR())
     DH_degen_cons_30303 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenHunterJac(HiGHS.Optimizer, 1e4))
+    DM_degen_cons_30303 = MadCheck.check_LICQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacDulmageMendelsohn())
+
 
     @test SVD_degen_cons_bt4 == [(constraints = [2, 3], bounds = [])]
     @test QR_degen_cons_bt4 == [(constraints = [3], bounds = [])] ||  QR_degen_cons_bt4 == [(constraints = [2], bounds = [])]
     @test DH_degen_cons_bt4 == [(constraints = [2, 3], bounds = [])]
+    @test Set(DM_degen_cons_bt4[1].constraints) == Set([]) && Set(DM_degen_cons_bt4[1].bounds) == Set([])
 
     @test SVD_degen_cons_30303 == [(constraints = [2, 3], bounds = [])]
     @test QR_degen_cons_30303 == [(constraints = [3], bounds = [])] ||  QR_degen_cons_30303 == [(constraints = [2], bounds = [])]
     @test DH_degen_cons_30303 == [(constraints = [2, 3], bounds = [])]
+    println(DM_degen_cons_30303)
+    @test Set(DM_degen_cons_30303[1].constraints) == Set([2,3]) && Set(DM_degen_cons_30303[1].bounds) == Set([1,2])
 end
 
 @testset "Test SCS verification" begin
