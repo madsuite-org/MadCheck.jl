@@ -4,7 +4,7 @@
     dulmage_mendelsohn(A, B, E)
 
 Compute the Dulmage-Mendelsohn decomposition [DulmageandMendelsohn-1958](@cite) to a bipartite graph. 
-A and B are expected to be the 2 sets of vertices (even if they both posess a certain element, the function will consider them different). E is the sets of edges.
+A and B are expected to be the 2 sets of vertices (even if they both possess a certain element, the function will consider them different). E is the sets of edges, we use the convention that edges are given from A to B (as in a tuple (a,b)).
 
 Return
 A named tuple with 2 fields A and B each a named tuple corresponding to the decomposition of A and B respectively,  each have the following fields:
