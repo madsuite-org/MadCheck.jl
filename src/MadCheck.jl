@@ -10,7 +10,7 @@ include("solution.jl")
 include("active_set.jl")
 include("jacobian_degeneracy.jl")
 include("constraint_qualification.jl")
-include("FeasL1Model.jl")
+include("Models/feas_l1_model.jl")
 include("feasibility.jl")
 
 end # module MadCheck
