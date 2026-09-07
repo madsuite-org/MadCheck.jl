@@ -1,4 +1,3 @@
-# TODO add MFCQ
 """
     build_work_jacobian(nlp, results, active, active_boundary)
 
@@ -87,6 +86,70 @@ function check_LICQ(
         end
 
         push!(rep, (constraints = cons, bounds = bounds))
+    end
+
+    return rep
+end
+
+
+"""
+    check_MFCQ(nlp, results, active_method::AbstractActiveSetMethod, degen_method::AbstractDegenJacMethod, direction_method::AbstractMFCQDirectionMethod)
+
+Check the MFCQ condition at a given point by looking for dependent constraints in the set of equality constraints and by using direction_method to test the direction condition.
+Takes the following arguments:
+-`nlp`: non linear programming problem studied
+-`results`: Point studied
+-`active_method`: method used for finding the active set
+-`degen_method`: method used for finding degenerate constraints in the set of equality constraints.
+-`direction_method`: method used to test the direction condition
+
+
+Returns a named tuples with 2 fields: 
+-`direction_solution`: The return of the direction method employed
+-`dependent_constraints`: list of named tuples with 2 fields: `constraints` and `bounds` corresponding to a set of dependent constraints/bounds.
+"""
+function check_MFCQ(
+    nlp,
+    results,
+    active_method::AbstractActiveSetMethod,
+    degen_method::AbstractDegenJacMethod,
+    direction_method::AbstractMFCQDirectionMethod
+)
+
+    active, active_boundary = find_active(nlp, results, active_method)
+
+    n_jfix = length(nlp.meta.jfix)
+    n_ifix = length(nlp.meta.ifix)
+    n_a = length(active)
+    n_ab = length(active_boundary)
+
+    if n_a + n_ab == 0
+        @warn "No active constraints found; consider using check_LICQ instead"
+    end
+    
+    Jac, indices_to_constraints_dir = build_work_jacobian(nlp, results, active, active_boundary)
+
+    direction_return = check_MFCQ_direction(Jac, n_jfix + n_ifix, direction_method)    # TODO Smarter more general return ?
+    
+    Jac, indices_to_constraints_jac = build_work_jacobian(nlp, results, [], [])
+    
+    list_degen_cons = find_degenerate(Jac, degen_method)
+
+    # Return
+    rep = (direction_solution = direction_return, dependent_constraints = []) # TODO find a smarter way to transmit the direction information
+
+    for degen_cons in list_degen_cons
+        cons = []
+        bounds = []
+        for i in degen_cons
+            if i <= n_jfix || n_jfix + n_ifix + 1 <= i <= n_jfix + n_ifix + n_a 
+                push!(cons, indices_to_constraints_jac[i])
+            else
+                push!(bounds, indices_to_constraints_jac[i])
+            end
+        end
+
+        push!(rep.dependent_constraints, (constraints = cons, bounds = bounds))
     end
 
     return rep

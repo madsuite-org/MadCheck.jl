@@ -86,6 +86,10 @@ Return
 list of vectors of indices corresponding to dependent sets of rows of Jac
 """
 function find_degenerate(Jac, method::DegenJacSVD)
+    if iszero(Jac)
+        return []
+    end
+
     n_jac, n = size(Jac)
     tol = method.tol
 
@@ -124,6 +128,10 @@ Return
 list containing one vector: a set of row indices that are dependent on the other rows
 """
 function find_degenerate(Jac, method::DegenJacQR)
+    if isempty(Jac)
+        return []
+    end
+
     n_jac, n = size(Jac)
     tol = method.tol
 
@@ -157,8 +165,11 @@ Reference:
 [DowlingandBiegler-2015] Dowling and Giegler - 2015 - Degeneracy Hunter: An Algorithm for Determining Irreducible Sets of Degenerate Constraints in Mathematical Programs
 """
 function find_degenerate(Jac, method::DegenHunterJac)
-    n_jac, n = size(Jac)
+    if isempty(Jac)
+        return []
+    end
 
+    n_jac, n = size(Jac)
     Jac_t = transpose(Jac)
 
     degenerate_idx = find_degenerate(Jac, DegenJacQR(tol = method.tol))[1]
