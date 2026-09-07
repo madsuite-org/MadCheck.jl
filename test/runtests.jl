@@ -4,6 +4,7 @@ using MadNLP
 using NLPModels
 using MadCheck
 using HiGHS
+using JSOSolvers
 using Random
 
 include("instances.jl")
@@ -82,3 +83,27 @@ end
     @test Set(active_LPEC.active) == Set(active_solution.active) && Set(active_LPEC.active_boundary) == Set(active_solution.active_boundary)
     @test Set(active_LPEC_A.active) == Set(active_solution.active) && Set(active_LPEC_A.active_boundary) == Set(active_solution.active_boundary)
 end
+
+
+@testset "Test feasibility problem resolution" begin
+    nlp = hs15_model()
+    nlp_no_start = hs15_model_no_start()
+    # TODO Find a cleaner way to treat start dependency ? Or use a different instance for the test
+
+
+    stats_l2_hs15 = MadCheck.check_feasibility(nlp, MadCheck.L2FeasibilityMethod(JSOSolvers.tron))    
+    stats_l1_hs15 = MadCheck.check_feasibility(nlp_no_start, MadCheck.L1FeasibilityMethod(MadNLP.madnlp; solver_options = (print_level = MadNLP.ERROR,)))
+
+    nlp_u = unfeasable_hs15_model()
+    stats_l2_hs15_unfeasable = MadCheck.check_feasibility(nlp_u, MadCheck.L2FeasibilityMethod(JSOSolvers.tron))
+    stats_l1_hs15_unfeasable = MadCheck.check_feasibility(nlp_u, MadCheck.L1FeasibilityMethod(MadNLP.madnlp; solver_options = (print_level = MadNLP.ERROR,)))
+
+
+    @test stats_l2_hs15.objective <= 1e-8
+    @test stats_l1_hs15.objective <= 1e-8
+
+    @test stats_l2_hs15_unfeasable.objective > 1e-8
+    @test stats_l1_hs15_unfeasable.objective > 1e-8
+end
+
+
