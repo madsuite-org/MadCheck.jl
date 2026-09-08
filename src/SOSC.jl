@@ -31,17 +31,14 @@ function check_SOSC(nlp, results, active_method::AbstractActiveSetMethod, tol::F
     Wx = NLPModels.hess_coord(nlp, x, y)
     Hess = sparse(Wi, Wj, Wx, n, n)
 
-    # Saddle point matrix
-    K = Array([Hess Jac'; Jac zeros((n_jac, n_jac))])
-
-    Z = LinearAlgebra.nullspace(K)
+    Z = LinearAlgebra.nullspace(Array(Jac))
 
     # Reduced Hessian
-    H = Z' * K * Z
+    H = Symmetric(Z' * Hess * Z)
 
     if isempty(H)
         return Inf
     end
 
-    return eigmin(Symmetric(H))
+    return eigmin(H)
 end
