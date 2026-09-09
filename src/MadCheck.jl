@@ -5,6 +5,7 @@ using SparseArrays
 import NLPModels
 using JuMP
 using NLPModelsModifiers
+using Arpack
 
 include("solution.jl")
 include("active_set.jl")

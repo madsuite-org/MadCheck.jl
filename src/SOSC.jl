@@ -34,11 +34,15 @@ function check_SOSC(nlp, results, active_method::AbstractActiveSetMethod, tol::F
     Z = LinearAlgebra.nullspace(Array(Jac))
 
     # Reduced Hessian
-    H = Symmetric(Z' * Hess * Z)
+    H = Symmetric(Z' * Symmetric(Hess, :L) * Z)    # TODO clarify this step and make it more efficient
 
     if isempty(H)
         return Inf
     end
 
-    return eigmin(H)
+    if size(H)[1] == 1  # Arpack.eigs needs H to be at least 2x2
+        return H[1,1]
+    end
+
+    return Arpack.eigs(H; nev = 1, which = :SR)[1][1]
 end
