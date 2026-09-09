@@ -16,12 +16,12 @@ function check_SOSC(nlp, results, active_method::AbstractActiveSetMethod, tol::F
     # Checks
     SCS = check_SCS(nlp, results, tol)
     if length(SCS.bounds) + length(SCS.constraints) != 0
-        @warn "Strict complementarity is not verified"
+        throw("Strict complementarity is not verified, $(length(SCS.bounds) + length(SCS.constraints)) constraints do not verify SCS")
     end
 
     QR = MadCheck.find_degenerate(Jac, DegenJacQR(tol))
     if length(QR)!=0 && length(QR[1]) != 0
-        @warn "Jacobian is not full row rank"
+        throw("Jacobian is not full row rank, $(length(QR[1])) dependent constraints detected")
     end
 
     # Hessian
@@ -34,13 +34,13 @@ function check_SOSC(nlp, results, active_method::AbstractActiveSetMethod, tol::F
     Z = LinearAlgebra.nullspace(Array(Jac))
 
     # Reduced Hessian
-    H = Symmetric(Z' * Symmetric(Hess, :L) * Z)    # TODO clarify this step and make it more efficient
+    H = Symmetric(Z' * Symmetric(Hess, :L) * Z, :L)    # TODO clarify this step and make it more efficient
 
     if isempty(H)
         return Inf
     end
 
-    if size(H)[1] == 1  # Arpack.eigs needs H to be at least 2x2
+    if size(H, 1) == 1  # Arpack.eigs needs H to be at least 2x2
         return H[1,1]
     end
 
