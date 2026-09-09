@@ -251,12 +251,13 @@ function find_degenerate(Jac, method::DegenJacDulmageMendelsohn)
     B = collect(1:n_jac)
     E = Tuple{Int64, Int64}[]
     
-    for i in 1:n, j in 1:n_jac
-        if abs(Jac[j, i]) > tol
-            push!(E, (i, j))
+    I, J , V = findnz(Jac)
+    for k in 1:length(V)
+        if abs(V[k]) > tol
+            push!(E, (J[k], I[k]))
         end
     end
-
+    
     dm_var, dm_con = dulmage_mendelsohn(A, B, E)
 
     return [dm_con.oc]

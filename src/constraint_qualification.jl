@@ -168,9 +168,10 @@ function check_dulmage_mendelsohn(
     B = collect(1:n_jac)
     E = Tuple{Int64,Int64}[]
 
-    for i = 1:n, j = 1:n_jac
-        if abs(Jac[j, i]) > tol
-            push!(E, (i, j))
+    I, J , V = findnz(Jac)
+    for k in 1:length(V)
+        if abs(V[k]) > tol
+            push!(E, (J[k], I[k]))
         end
     end
 
