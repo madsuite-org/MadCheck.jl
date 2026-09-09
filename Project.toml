@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["fpacaud <francoispacaud8@gmail.com>"]
 
 [deps]
+BipartiteMatching = "79040ab4-24c8-4c92-950c-d48b5991a0f6"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MadNLP = "2621e9c9-9eb4-46b1-8089-e8c72242dfb6"
@@ -12,6 +14,8 @@ NLPModelsModifiers = "e01155f1-5c6f-4375-a9d8-616dd036575f"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
+BipartiteMatching = "0.1.1"
+Graphs = "1.15.0"
 JuMP = "1.31.2"
 LinearAlgebra = "1.12.0"
 MadNLP = "0.10.1"
