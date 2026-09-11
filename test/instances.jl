@@ -79,3 +79,18 @@ function degen_scs_2_model()
     @constraint(model, -x <= 0.0)
     return MathOptNLPModel(model)
 end
+
+function degen_sosc_1_model()
+    model = Model()
+    @variable(model, -1<=x<=1)
+    @objective(model, Min, 0.)
+    return MathOptNLPModel(model)
+end
+
+function degen_sosc_2_model()
+    model = Model()
+    @variable(model, x[1:2])
+    @objective(model, Min, x[1]^4 + x[1]*x[2])
+    @constraint(model, x[2] == 0)
+    return MathOptNLPModel(model)
+end

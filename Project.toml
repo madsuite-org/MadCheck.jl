@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["fpacaud <francoispacaud8@gmail.com>"]
 
 [deps]
+Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
 BipartiteMatching = "79040ab4-24c8-4c92-950c-d48b5991a0f6"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
@@ -14,6 +15,7 @@ NLPModelsModifiers = "e01155f1-5c6f-4375-a9d8-616dd036575f"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
+Arpack = "0.5.4"
 BipartiteMatching = "0.1.1"
 Graphs = "1.15.0"
 JuMP = "1.31.2"

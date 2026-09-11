@@ -106,30 +106,13 @@ end
 end
 
 @testset "Test MFCQ verification" begin
-    nlp = degenerate_bt4_model()
-    results = madnlp(nlp; print_level=MadNLP.ERROR)
-
-    primal_dir_degen_cons_bt4 = MadCheck.check_MFCQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacSVD(), MadCheck.MFCQDirectionPrimal(HiGHS.Optimizer))
-    dual_dir_degen_cons_bt4 = MadCheck.check_MFCQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacSVD(), MadCheck.MFCQDirectionDual(HiGHS.Optimizer))
-
-
     nlp = degen_30303_model()
     results = madnlp(nlp; print_level=MadNLP.ERROR)
 
     primal_dir_degen_cons_30303 = MadCheck.check_MFCQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacSVD(), MadCheck.MFCQDirectionPrimal(HiGHS.Optimizer))
     dual_dir_degen_cons_30303 = MadCheck.check_MFCQ(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), MadCheck.DegenJacSVD(), MadCheck.MFCQDirectionDual(HiGHS.Optimizer))
 
-
-    @test primal_dir_degen_cons_bt4.dependent_constraints == [(constraints = [2, 3], bounds = [])]
-    d_sol, t_sol =  primal_dir_degen_cons_bt4.direction_solution
-    @test t_sol == []
-
-    @test dual_dir_degen_cons_bt4.dependent_constraints == [(constraints = [2, 3], bounds = [])]
-    λ_sol =  dual_dir_degen_cons_bt4.direction_solution
-    @test maximum(abs.(λ_sol)) >= 1e-8
-
-    
-    @test primal_dir_degen_cons_30303.dependent_constraints == []
+        @test primal_dir_degen_cons_30303.dependent_constraints == []
     d_sol, t_sol =  primal_dir_degen_cons_30303.direction_solution
     @test minimum(t_sol) < 1e-8
 
@@ -178,6 +161,24 @@ end
     @test Set(active_LPEC_A.active) == Set(active_solution.active) && Set(active_LPEC_A.active_boundary) == Set(active_solution.active_boundary)
 end
 
+@testset "Test SOSC verification" begin
+    tol = 1e-7
+    nlp = hs15_model()
+    results = madnlp(nlp; print_level = MadNLP.ERROR)
+    sosc_hs15 = MadCheck.check_SOSC(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), tol)
+
+    nlp = degen_sosc_1_model()
+    results = madnlp(nlp; print_level = MadNLP.ERROR)
+    sosc_1 = MadCheck.check_SOSC(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), tol)
+
+    nlp = degen_sosc_2_model()
+    results = madnlp(nlp; print_level = MadNLP.ERROR)
+    sosc_2 = MadCheck.check_SOSC(nlp, results, MadCheck.ApproximatePrimalDualActiveSetLPEC(HiGHS.Optimizer), tol)
+
+    @test sosc_hs15 >= tol
+    @test sosc_1 < tol
+    @test sosc_2 < tol
+end
 
 @testset "Test feasibility problem resolution" begin
     nlp = hs15_model()

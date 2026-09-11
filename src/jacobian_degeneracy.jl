@@ -151,7 +151,7 @@ Return
 list containing one vector: a set of row indices that are dependent on the other rows
 """
 function find_degenerate(Jac, method::DegenJacQR)
-    if isempty(Jac)
+    if iszero(Jac)
         return []
     end
 
@@ -188,7 +188,7 @@ Reference:
 [DowlingandBiegler-2015] Dowling and Giegler - 2015 - Degeneracy Hunter: An Algorithm for Determining Irreducible Sets of Degenerate Constraints in Mathematical Programs
 """
 function find_degenerate(Jac, method::DegenHunterJac)
-    if isempty(Jac)
+    if iszero(Jac)
         return []
     end
 
