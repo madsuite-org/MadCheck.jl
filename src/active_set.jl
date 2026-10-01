@@ -8,7 +8,7 @@ abstract type AbstractActiveSetMethod end
 """
     BasicActiveSet <: AbstractActiveSetMethod
 
-Composite type for the basic method consisting of runing the test c(x) = 0,
+Composite type for the basic method consisting of running the test c(x) = 0,
 contains one parameter
     `tol`: tolerance of the method
 """
@@ -19,7 +19,7 @@ end
 """
     BasicActiveSet(; kwargs...)
 
-Creates an ActiveMethodeSimple with `tol` = 1e-8.
+Creates a BasicActiveSet with `tol` = 1e-8.
 
 """
 BasicActiveSet(;tol = 1e-8) = BasicActiveSet(tol)
@@ -52,7 +52,7 @@ end
 """
     PrimalActiveSetLP(linear_program_solver; kwargs...)
 
-Create an PrimalActiveSetLP where all fields can be specified as keyword arguments, a linear program solver and the trust region parameter must be provided.
+Create a PrimalActiveSetLP where all fields can be specified as keyword arguments, a linear program solver and the trust region parameter must be provided.
 The following default values are set
 -`silent`: true
 -`tol`: 1e-8
@@ -92,13 +92,13 @@ end
 """
     PrimalDualActiveSetLPEC(solver; kwargs...)
 
-Create an PrimalDualActiveSetLPEC where all fields can be specified as keyword arguments, a MILP optimization solver must be provided.
+Create a PrimalDualActiveSetLPEC where all fields can be specified as keyword arguments, a MILP optimization solver must be provided.
 The following default values are set:
 -`silent`: true
 -`tol`: 1e-8
 -`solver_options`: () i.e. none
--`M`: NaN wich is replaced by 10*max(norm(λ_ineq, Inf), norm(c_ineq, Inf)) when the associated find_active() is used, with c_ineq is the inequality constraints and λ_ineq their associated multipliers
--`β`: NaN wich is replaced by 1/(m+n) when the associated find_active() is used, with n the number of variables and m of constraints
+-`M`: NaN which is replaced by 10*max(norm(λ_ineq, Inf), norm(c_ineq, Inf)) when the associated find_active() is used, with c_ineq is the inequality constraints and λ_ineq their associated multipliers
+-`β`: NaN which is replaced by 1/(m+n) when the associated find_active() is used, with n the number of variables and m of constraints
 -`σ`: 0.75
 """
 PrimalDualActiveSetLPEC(solver::DataType ;silent = true, tol = 1e-8, solver_options = (), M = NaN, β = NaN, σ = 0.75) = PrimalDualActiveSetLPEC(silent, tol, solver, solver_options, M, β, σ)
@@ -137,7 +137,7 @@ The following default values are set:
 -`silent`: true
 -`tol`: 1e-8
 -`solver_options`: () i.e. none
--`β`: NaN wich is replaced by 1/(m+n) when the associated find_active() is used, with n the number of variables and m of constraints
+-`β`: NaN which is replaced by 1/(m+n) when the associated find_active() is used, with n the number of variables and m of constraints
 -`σ`: 0.90
 """
 ApproximatePrimalDualActiveSetLPEC(linear_program_solver::DataType ;silent = true, tol = 1e-8, solver_options = (), β = NaN, σ = 0.90) = ApproximatePrimalDualActiveSetLPEC(silent, tol, linear_program_solver, solver_options, β, σ)
@@ -258,7 +258,7 @@ function find_active(nlp, results, method::PrimalActiveSetLP)
                   x[ilow],
     )
 
-    u = vcat(ucon[jrng],
+    c_upp = vcat(ucon[jrng],
              ucon[jupp],
              ucon[jlow],
              uvar[irng],
@@ -266,7 +266,7 @@ function find_active(nlp, results, method::PrimalActiveSetLP)
              uvar[ilow],
     )
 
-    l = vcat(lcon[jrng],
+    c_low = vcat(lcon[jrng],
              lcon[jupp],
              lcon[jlow],
              lvar[irng],
@@ -326,17 +326,17 @@ function find_active(nlp, results, method::PrimalActiveSetLP)
         @variable(model,  r[1:n_ineq] >= 0)
 
         for i in 1:n_ineq
-            if isfinite(u[i])
-                @constraint(model, J_ineq[i,:]' * d + c_ineq[i] <= u[i] + r[i])
+            if isfinite(c_upp[i])
+                @constraint(model, J_ineq[i,:]' * d + c_ineq[i] <= c_upp[i] + r[i])
             end
-            if isfinite(l[i])
-                @constraint(model, J_ineq[i,:]' * d + c_ineq[i] >= l[i] + r[i])
+            if isfinite(c_low[i])
+                @constraint(model, J_ineq[i,:]' * d + c_ineq[i] >= c_low[i] - r[i])
             end
         end
 
         @expression(model, slackCost_ineq, ν * sum(r))
     else
-        @expression(model, slackCost_eq, 0.)
+        @expression(model, slackCost_ineq, 0.)
     end
 
     @objective(model, Min, dot(g,d) + slackCost_eq + slackCost_ineq)
@@ -355,7 +355,7 @@ function find_active(nlp, results, method::PrimalActiveSetLP)
     active_boundary = Int64[]
 
     for i in 1:n_ineq
-        if dot(J_ineq[i, :], d_sol) + c_ineq[i] >= u[i] - tol || dot(J_ineq[i, :], d_sol) + c_ineq[i] <= l[i] + tol
+        if dot(J_ineq[i, :], d_sol) + c_ineq[i] >= c_upp[i] - tol || dot(J_ineq[i, :], d_sol) + c_ineq[i] <= c_low[i] + tol
             if i <= n_ineq_con
                 push!(active, indices_to_constraints[i])
             else
@@ -426,12 +426,12 @@ function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
     J_eq = vcat(Jac[jfix,:], spdiagm(ones(n))[ifix,:])
     Jt_eq = transpose(J_eq)
 
-    # For inequality contraints, we use the convention c(x) <= 0
+    # For inequality constraints, we use the convention c(x) <= 0
 
-    c_ineq = vcat(min.(constraints[jrng] - ucon[jrng], lcon[jrng] - constraints[jrng]),
+    c_ineq = vcat(max.(constraints[jrng] - ucon[jrng], lcon[jrng] - constraints[jrng]),
                   constraints[jupp] -  ucon[jupp],
                   lcon[jlow] - constraints[jlow],
-                  min.(x[irng] - uvar[irng], lvar[irng] - x[irng]),
+                  max.(x[irng] - uvar[irng], lvar[irng] - x[irng]),
                   x[iupp] - uvar[iupp],
                   lvar[ilow] - x[ilow],
     )
@@ -525,10 +525,10 @@ function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
     ω = objective_value(model) + norm(c_eq,1)
 
     if ω < -tol
-        trow(DomainError(ω, "Optimal value of subproblem is negative"))
+        throw(DomainError(ω, "Optimal value of subproblem is negative"))
     end
 
-    clamp(ω, 0., Inf)      # TODO better way to deal with the case where ω is in [-tol, 0) ?
+    ω = clamp(ω, 0., Inf)    # TODO better way to deal with the case where ω is in [-tol, 0) ?
 
     # Active set test
 
@@ -607,12 +607,12 @@ function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
     J_eq = vcat(Jac[jfix,:], spdiagm(ones(n))[ifix,:])
     Jt_eq = transpose(J_eq)
 
-    # For inequality contraints, we use the convention c(x) <= 0
+    # For inequality constraints, we use the convention c(x) <= 0
 
-    c_ineq = vcat(min.(constraints[jrng] - ucon[jrng], lcon[jrng] - constraints[jrng]),
+    c_ineq = vcat(max.(constraints[jrng] - ucon[jrng], lcon[jrng] - constraints[jrng]),
                   constraints[jupp] -  ucon[jupp],
                   lcon[jlow] - constraints[jlow],
-                  min.(x[irng] - uvar[irng], lvar[irng] - x[irng]),
+                  max.(x[irng] - uvar[irng], lvar[irng] - x[irng]),
                   x[iupp] - uvar[iupp],
                   lvar[ilow] - x[ilow],
     )
@@ -712,7 +712,7 @@ function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
     )
 
     if ρ_sup < -tol
-        trow(DomainError(ρ_sup, "test bound ρ_sup is negative"))
+        throw(DomainError(ρ_sup, "test bound ρ_sup is negative"))
     end
     ρ_sup = clamp(ρ_sup, 0., Inf) #TODO same question here
 

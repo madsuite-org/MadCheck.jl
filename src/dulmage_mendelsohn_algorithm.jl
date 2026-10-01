@@ -13,7 +13,7 @@ A named tuple with 2 fields A and B each a named tuple corresponding to the deco
 -`sq`: Well defined elements of the set (square set)
 
 Reference:
-[DulmageandMendelsohn-1958] Dulage and Mendelsohn - 1958 - Coverings of Bipartite Graphs
+[DulmageandMendelsohn-1958] Dulmage and Mendelsohn - 1958 - Coverings of Bipartite Graphs
 """
 function dulmage_mendelsohn(A::Vector{T}, B::Vector{T}, E::Vector{Tuple{T,T}}) where {T}
     n_a = length(A)

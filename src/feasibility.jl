@@ -1,7 +1,7 @@
 """
     AbstractFeasibilityMethod
 
-Base type for the different feasibilty methods implemented
+Base type for the different feasibility methods implemented
 """
 abstract type AbstractFeasibilityMethod end
 
@@ -19,9 +19,9 @@ struct L2FeasibilityMethod <: AbstractFeasibilityMethod
 end
 
 """
-    L2FeasibilityMethod(linear_program_solver; kwargs...)
+    L2FeasibilityMethod(solver; kwargs...)
 
-Create an L2FeasibilityMethod where the solver must be provided and solver_options can given specified as a keyword argument, the default value is `solver_options`= () i.e. none
+Create an L2FeasibilityMethod where the solver must be provided and solver_options can be specified as a keyword argument, the default value is `solver_options`= () i.e. none
 """
 L2FeasibilityMethod(solver; solver_options = ()) = L2FeasibilityMethod(solver, solver_options)
 
@@ -39,9 +39,9 @@ struct L1FeasibilityMethod <: AbstractFeasibilityMethod
 end
 
 """
-    L1FeasibilityMethod(linear_program_solver; kwargs...)
+    L1FeasibilityMethod(solver; kwargs...)
 
-Create an L1FeasibilityMethod where the solver must be provided and solver_options can given specified as a keyword argument, the default value is `solver_options`= () i.e. none
+Create an L1FeasibilityMethod where the solver must be provided and solver_options can be specified as a keyword argument, the default value is `solver_options`= () i.e. none
 """
 L1FeasibilityMethod(solver; solver_options = ()) = L1FeasibilityMethod(solver, solver_options)
 

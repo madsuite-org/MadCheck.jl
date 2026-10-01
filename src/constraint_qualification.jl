@@ -17,8 +17,8 @@ function build_work_jacobian(nlp, results, active, active_boundary)
 
     ucon = nlp.meta.ucon
     lcon = nlp.meta.lcon
-    uvar = nlp.meta.lvar
-    lvar = nlp.meta.uvar
+    uvar = nlp.meta.uvar
+    lvar = nlp.meta.lvar
 
     x = results.solution
     Ji, Jj = NLPModels.jac_structure(nlp)
@@ -166,7 +166,7 @@ Takes the following arguments:
 - `results`: Point studied
 - `tol::Float64`
 
-Returns a list of named tuples with 2 fields: `constraints` and `bounds` corresponding to a set of dependent constraints/bounds.
+Returns a named tuple with 2 fields: `constraints` and `bounds` containing the indices of the constraints/bounds violating SCS.
 """
 function check_SCS(nlp::NLPModels.AbstractNLPModel, results, tol::Float64)
     n = NLPModels.get_nvar(nlp)
@@ -200,19 +200,19 @@ function check_SCS(nlp::NLPModels.AbstractNLPModel, results, tol::Float64)
 end
 
 """
-    check_dulmage_mendelsohn(nlp, results, active_method)
+    check_dulmage_mendelsohn(nlp, results, active_method, tol)
 
 Computes the equality and active jacobian at results, then creates the factor graph between constraints and variables by using the jacobian to determine if a given constraint depends on a given variable. Then applies the Dulmage-Mendelsohn decomposition [DulmageandMendelsohn-1958](@cite) to the factor graph, this method is based on the paper [Dulmage-Mendelsohn_method-2023](@cite). The given tolerance is used to decide if a value in the jacobian is zero.
 
 Return
 A named tuple with three fields `variables`, `constraints` and `bounds`,
-Each are a named tuple with the folowing fields:
+Each are a named tuple with the following fields:
 -`oc`: Overconstrained elements
 -`uc`: Underconstrained elements
 -`sq`: Well defined elements (square set)
 
 References:
-[DulmageandMendelsohn-1958] Dulage and Mendelsohn - 1958 - Coverings of Bipartite Graphs
+[DulmageandMendelsohn-1958] Dulmage and Mendelsohn - 1958 - Coverings of Bipartite Graphs
 
 [Dulmage-Mendelsohn_method-2023] Parker, Nicholson, Siirola, Biegler - 2023 - Applications of the Dulmage–Mendelsohn decomposition for debugging
 nonlinear optimization problems
