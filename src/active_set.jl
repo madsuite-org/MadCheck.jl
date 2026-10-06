@@ -143,6 +143,12 @@ The following default values are set:
 ApproximatePrimalDualActiveSetLPEC(linear_program_solver::DataType ;silent = true, tol = 1e-8, solver_options = (), β = NaN, σ = 0.90) = ApproximatePrimalDualActiveSetLPEC(silent, tol, linear_program_solver, solver_options, β, σ)
 
 
+# Convert the inequality rows of `form` detected as active into constraint and bound indices
+function _active_set(form::StandardForm, rows)
+    split = split_cons_bounds(rows, form.idx_ineq, form.is_con_ineq)
+    return (active = split.constraints, active_boundary = split.bounds)
+end
+
 """
     find_active(nlp, results, method::BasicActiveSet)
 
@@ -154,47 +160,11 @@ Returns named tuple with 2 attributes:
 
 """
 function find_active(nlp, results, method::BasicActiveSet)
-    tol = method.tol
+    form = standard_form(nlp, results.solution)
 
-    x = results.solution
+    rows = findall(form.c_ineq .>= -method.tol)
 
-    constraints = NLPModels.cons(nlp, x)
-
-    lvar = nlp.meta.lvar
-    uvar = nlp.meta.uvar
-
-    lcon = nlp.meta.lcon
-    ucon = nlp.meta.ucon
-
-    jlow = nlp.meta.jlow
-    jupp = nlp.meta.jupp
-    jrng = nlp.meta.jrng
-
-    ilow = nlp.meta.ilow
-    iupp = nlp.meta.iupp
-    irng = nlp.meta.irng
-
-
-    var_ineq_idx = vcat(irng, iupp, ilow)
-    con_ineq_idx = vcat(jrng, jlow, jupp)
-
-    active = Int64[]
-    active_boundary = Int64[]
-
-    # Test run
-    for i in var_ineq_idx
-        if x[i]  - lvar[i] <= tol || uvar[i] - x[i] <= tol
-            push!(active_boundary, i)
-        end
-    end
-
-    for i in con_ineq_idx
-        if constraints[i]  - lcon[i] <= tol || ucon[i] - constraints[i] <= tol
-            push!(active, i)
-        end
-    end
-
-    return (active = active, active_boundary = active_boundary)
+    return _active_set(form, rows)
 end
 
 """
@@ -211,25 +181,7 @@ Returns named tuple with 2 attributes:
 [OberlinandWright-2006] Oberlin and Wright - 2006 - Active Set Identification in Nonlinear Programming
 """
 function find_active(nlp, results, method::PrimalActiveSetLP)
-    n = NLPModels.get_nvar(nlp)
-    m = NLPModels.get_ncon(nlp)
     tol = method.tol
-
-    jfix = nlp.meta.jfix
-    jlow = nlp.meta.jlow
-    jupp = nlp.meta.jupp
-    jrng = nlp.meta.jrng
-
-    ifix = nlp.meta.ifix
-    ilow = nlp.meta.ilow
-    iupp = nlp.meta.iupp
-    irng = nlp.meta.irng
-
-    lvar = nlp.meta.lvar
-    uvar = nlp.meta.uvar
-
-    lcon = nlp.meta.lcon
-    ucon = nlp.meta.ucon
 
     x = results.solution
 
@@ -237,54 +189,20 @@ function find_active(nlp, results, method::PrimalActiveSetLP)
     zl = results.multipliers_L
     zu = results.multipliers_U
 
-    Ji, Jj = NLPModels.jac_structure(nlp)
-    Jx = NLPModels.jac_coord(nlp, results.solution)
-    Jac = sparse(Ji, Jj, Jx, m, n)
-
-    constraints = NLPModels.cons(nlp, x)
+    form = standard_form(nlp, x)
+    n = form.nvar
 
     g = NLPModels.grad(nlp, x)
 
-    # Creating equality and inequality constraints and gradients in the right format
-    c_eq = vcat(constraints[jfix] - ucon[jfix], x[ifix] - uvar[ifix])
+    c_eq, J_eq = form.c_eq, form.J_eq
     n_eq = length(c_eq)
-    J_eq = vcat(Jac[jfix,:], spdiagm(ones(n))[ifix,:])
 
-    c_ineq = vcat(constraints[jrng],
-                  constraints[jupp],
-                  constraints[jlow],
-                  x[irng],
-                  x[iupp],
-                  x[ilow],
-    )
-
-    c_upp = vcat(ucon[jrng],
-             ucon[jupp],
-             ucon[jlow],
-             uvar[irng],
-             uvar[iupp],
-             uvar[ilow],
-    )
-
-    c_low = vcat(lcon[jrng],
-             lcon[jupp],
-             lcon[jlow],
-             lvar[irng],
-             lvar[iupp],
-             lvar[ilow],
-    )
-
-    J_ineq = vcat(Jac[jrng, :],
-                  Jac[jupp, :],
-                  Jac[jlow, :],
-                  spdiagm(ones(n))[irng,:],
-                  spdiagm(ones(n))[iupp,:],
-                  spdiagm(ones(n))[ilow,:],
-    )
-
-    indices_to_constraints = vcat(jrng, jupp, jlow, irng, iupp, ilow)
+    # The LP subproblem uses the raw form c_low ≤ c ≤ c_upp of the inequality constraints
+    c_ineq = form.val_ineq
+    c_low = form.low_ineq
+    c_upp = form.upp_ineq
+    J_ineq = form.J_ineq_raw
     n_ineq = length(c_ineq)
-    n_ineq_con = length(jrng) + length(jupp) + length(jlow)
 
     # Parameter calculation
     if isnan(method.ν)
@@ -350,22 +268,10 @@ function find_active(nlp, results, method::PrimalActiveSetLP)
     d_sol = value.(d)
 
     # Active set test
+    c_lin = c_ineq + J_ineq * d_sol
+    rows = findall((c_lin .>= c_upp .- tol) .| (c_lin .<= c_low .+ tol))
 
-    active = Int64[]
-    active_boundary = Int64[]
-
-    for i in 1:n_ineq
-        if dot(J_ineq[i, :], d_sol) + c_ineq[i] >= c_upp[i] - tol || dot(J_ineq[i, :], d_sol) + c_ineq[i] <= c_low[i] + tol
-            if i <= n_ineq_con
-                push!(active, indices_to_constraints[i])
-            else
-                push!(active_boundary, indices_to_constraints[i])
-            end
-        end
-    end
-
-
-    return (active = active, active_boundary = active_boundary)
+    return _active_set(form, rows)
 end
 
 """
@@ -381,31 +287,7 @@ Returns named tuple with 2 attributes:
 [OberlinandWright-2006] Oberlin and Wright - 2006 - Active Set Identification in Nonlinear Programming
 """
 function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
-    n = NLPModels.get_nvar(nlp)
-    m = NLPModels.get_ncon(nlp)
     tol = method.tol
-
-    jfix = nlp.meta.jfix
-    jlow = nlp.meta.jlow
-    jupp = nlp.meta.jupp
-    jrng = nlp.meta.jrng
-
-    ifix = nlp.meta.ifix
-    ilow = nlp.meta.ilow
-    iupp = nlp.meta.iupp
-    irng = nlp.meta.irng
-
-    allupp_con = vcat(jrng, jupp)
-    alllow_con = vcat(jrng, jlow)
-
-    allupp_var = vcat(irng, iupp)
-    alllow_var = vcat(irng, ilow)
-
-    lvar = nlp.meta.lvar
-    uvar = nlp.meta.uvar
-
-    lcon = nlp.meta.lcon
-    ucon = nlp.meta.ucon
 
     x = results.solution
 
@@ -413,44 +295,20 @@ function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
     zl = results.multipliers_L
     zu = results.multipliers_U
 
-    Ji, Jj = NLPModels.jac_structure(nlp)
-    Jx = NLPModels.jac_coord(nlp, x)
-    Jac = sparse(Ji, Jj, Jx, m, n)
+    form = standard_form(nlp, x)
+    n = form.nvar
+    m = form.ncon
 
-    constraints = NLPModels.cons(nlp, x)
     g = NLPModels.grad(nlp, x)
 
-    # Creating equality and inequality constraints and gradients in the right format
-    c_eq = vcat(constraints[jfix] - ucon[jfix], x[ifix] - uvar[ifix])
+    c_eq = form.c_eq
     n_eq = length(c_eq)
-    J_eq = vcat(Jac[jfix,:], spdiagm(ones(n))[ifix,:])
-    Jt_eq = transpose(J_eq)
+    Jt_eq = transpose(form.J_eq)
 
     # For inequality constraints, we use the convention c(x) <= 0
-
-    c_ineq = vcat(max.(constraints[jrng] - ucon[jrng], lcon[jrng] - constraints[jrng]),
-                  constraints[jupp] -  ucon[jupp],
-                  lcon[jlow] - constraints[jlow],
-                  max.(x[irng] - uvar[irng], lvar[irng] - x[irng]),
-                  x[iupp] - uvar[iupp],
-                  lvar[ilow] - x[ilow],
-    )
-
-    sign_con = [(ucon[i] - constraints[i]) > (constraints[i] - lcon[i]) ? -1 : 1 for i in jrng]
-    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in irng]
-
-    J_ineq = vcat(Jac[jrng, :] .* sign_con,
-                  Jac[jupp, :],
-                  -Jac[jlow, :],
-                  spdiagm(ones(n))[irng,:] .* sign_var,
-                  spdiagm(ones(n))[iupp,:],
-                  -spdiagm(ones(n))[ilow,:],
-    )
-
-    indices_to_constraints = vcat(jrng, jupp, jlow, irng, iupp, ilow)
+    c_ineq = form.c_ineq
     n_ineq = length(c_ineq)
-    n_ineq_con = length(jrng) + length(jupp) + length(jlow)
-    Jt_ineq = transpose(J_ineq)
+    Jt_ineq = transpose(form.J_ineq)
 
     # Parameter calculation
     if isnan(method.M)
@@ -528,24 +386,12 @@ function find_active(nlp, results, method::PrimalDualActiveSetLPEC)
         throw(DomainError(ω, "Optimal value of subproblem is negative"))
     end
 
-    ω = clamp(ω, 0., Inf)    # TODO better way to deal with the case where ω is in [-tol, 0) ?
+    ω = clamp(ω, 0., Inf)      # TODO better way to deal with the case where ω is in [-tol, 0) ?
 
     # Active set test
+    rows = findall(c_ineq .>= -(β*ω)^σ - tol)
 
-    active = Int64[]
-    active_boundary = Int64[]
-
-    for i in 1:n_ineq
-        if c_ineq[i] >= -(β*ω)^σ - tol
-            if i <= n_ineq_con
-                push!(active, indices_to_constraints[i])
-            else
-                push!(active_boundary, indices_to_constraints[i])
-            end
-        end
-    end
-
-    return (active = active, active_boundary = active_boundary)
+    return _active_set(form, rows)
 end
 
 
@@ -562,76 +408,27 @@ Returns named tuple with 2 attributes:
 [OberlinandWright-2006] Oberlin and Wright - 2006 - Active Set Identification in Nonlinear Programming
 """
 function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
-    n = NLPModels.get_nvar(nlp)
-    m = NLPModels.get_ncon(nlp)
     tol = method.tol
-
-    jfix = nlp.meta.jfix
-    jlow = nlp.meta.jlow
-    jupp = nlp.meta.jupp
-    jrng = nlp.meta.jrng
-
-    ifix = nlp.meta.ifix
-    ilow = nlp.meta.ilow
-    iupp = nlp.meta.iupp
-    irng = nlp.meta.irng
-
-    allupp_con = vcat(jrng, jupp)
-    alllow_con = vcat(jrng, jlow)
-
-    allupp_var = vcat(irng, iupp)
-    alllow_var = vcat(irng, ilow)
-
-    lvar = nlp.meta.lvar
-    uvar = nlp.meta.uvar
-
-    lcon = nlp.meta.lcon
-    ucon = nlp.meta.ucon
-
 
     x = results.solution
     y = results.multipliers
     zl = results.multipliers_L
     zu = results.multipliers_U
 
-    Ji, Jj = NLPModels.jac_structure(nlp)
-    Jx = NLPModels.jac_coord(nlp, results.solution)
-    Jac = sparse(Ji, Jj, Jx, m, n)
-    constraints = NLPModels.cons(nlp, x)
+    form = standard_form(nlp, x)
+    n = form.nvar
+    m = form.ncon
 
     g = NLPModels.grad(nlp, x)
 
-    # Creating equality and inequality constraints and gradients in the right format
-    c_eq = vcat(constraints[jfix] - ucon[jfix], x[ifix] - uvar[ifix])
+    c_eq = form.c_eq
     n_eq = length(c_eq)
-    J_eq = vcat(Jac[jfix,:], spdiagm(ones(n))[ifix,:])
-    Jt_eq = transpose(J_eq)
+    Jt_eq = transpose(form.J_eq)
 
     # For inequality constraints, we use the convention c(x) <= 0
-
-    c_ineq = vcat(max.(constraints[jrng] - ucon[jrng], lcon[jrng] - constraints[jrng]),
-                  constraints[jupp] -  ucon[jupp],
-                  lcon[jlow] - constraints[jlow],
-                  max.(x[irng] - uvar[irng], lvar[irng] - x[irng]),
-                  x[iupp] - uvar[iupp],
-                  lvar[ilow] - x[ilow],
-    )
-
-    sign_con = [(ucon[i] - constraints[i]) > (constraints[i] - lcon[i]) ? -1 : 1 for i in jrng]
-    sign_var = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in irng]
-
-    J_ineq = vcat(Jac[jrng, :] .* sign_con,
-                  Jac[jupp, :],
-                  -Jac[jlow, :],
-                  spdiagm(ones(n))[irng,:] .* sign_var,
-                  spdiagm(ones(n))[iupp,:],
-                  -spdiagm(ones(n))[ilow,:],
-    )
-
-    indices_to_constraints = vcat(jrng, jupp, jlow, irng, iupp, ilow)
+    c_ineq = form.c_ineq
     n_ineq = length(c_ineq)
-    n_ineq_con = length(jrng) + length(jupp) + length(jlow)
-    Jt_ineq = transpose(J_ineq)
+    Jt_ineq = transpose(form.J_ineq)
 
     neg_idx = findall(x -> x<-tol, c_ineq)
     pos_idx = setdiff(1:n_ineq, neg_idx)
@@ -717,18 +514,7 @@ function find_active(nlp, results, method::ApproximatePrimalDualActiveSetLPEC)
     ρ_sup = clamp(ρ_sup, 0., Inf) #TODO same question here
 
     # Active set test
+    rows = findall(c_ineq .>= -(β*ρ_sup)^σ - tol)
 
-    active = Int64[]
-    active_boundary = Int64[]
-    for i in 1:n_ineq
-        if c_ineq[i] >= -(β*ρ_sup)^σ - tol
-            if i <= n_ineq_con
-                push!(active, indices_to_constraints[i])
-            else
-                push!(active_boundary, indices_to_constraints[i])
-            end
-        end
-    end
-
-    return (active = active, active_boundary = active_boundary)
+    return _active_set(form, rows)
 end

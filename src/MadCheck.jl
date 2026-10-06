@@ -10,6 +10,7 @@ using NLPModelsModifiers
 using Arpack
 
 include("solution.jl")
+include("standard_form.jl")
 include("active_set.jl")
 include("dulmage_mendelsohn_algorithm.jl")
 include("jacobian_degeneracy.jl")
