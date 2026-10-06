@@ -1,4 +1,5 @@
 """
+    build_work_jacobian(form::StandardForm, active, active_boundary)
     build_work_jacobian(nlp, results, active, active_boundary)
 
 Create the jacobian the method is working on based on what active set wants to be used (i.e. active = [] and active_boundary = [] for MFCQ). This jacobian can then be given to methods in jacobian_degeneracy and MFCQ_direction_condition for analysis.
@@ -6,40 +7,32 @@ We set the sign convention c(x) <= 0 for use in MFCQ.
 
 Return
 -`J_work`: Constructed jacobian
--`indices_to_constraints`: vector mapping the indices of the columns of `J_work` to the constraints indices, the vector used the order jfix, ifix, active, active_boundary which can be used to separate usual constraints and boundary constraints.
+-`indices_to_constraints`: vector mapping the indices of the rows of `J_work` to the constraints indices, the vector uses the order jfix, ifix, active, active_boundary.
+-`is_con`: vector telling whether each row of `J_work` is a constraint (true) or a bound (false).
 """
-function build_work_jacobian(nlp, results, active, active_boundary)
-    n = NLPModels.get_nvar(nlp)
-    m = NLPModels.get_ncon(nlp)
-
-    jfix = nlp.meta.jfix
-    ifix = nlp.meta.ifix
-
-    ucon = nlp.meta.ucon
-    lcon = nlp.meta.lcon
-    uvar = nlp.meta.lvar
-    lvar = nlp.meta.uvar
-
-    x = results.solution
-    Ji, Jj = NLPModels.jac_structure(nlp)
-    Jx = NLPModels.jac_coord(nlp, x)
-    J = sparse(Ji, Jj, Jx, m, n)
-
-    constraints = NLPModels.cons(nlp, x)
-
-    sign = [(ucon[i] - constraints[i]) > (constraints[i] - lcon[i]) ? -1 : 1 for i in active]
-    sign_boundary = [(uvar[i] - x[i]) > (x[i] - lvar[i]) ? -1 : 1 for i in active_boundary]
+function build_work_jacobian(form::StandardForm, active, active_boundary)
+    n = form.nvar
 
     J_work = vcat(
-        J[jfix, :],
-        spdiagm(ones(n))[ifix, :],
-        J[active, :] .* sign,
-        spdiagm(ones(n))[active_boundary, :] .* sign_boundary,
+        form.jac[form.jfix, :],
+        _selection_rows(form.ifix, n),
+        form.jac[active, :] .* form.sign_con[active],
+        _selection_rows(active_boundary, n) .* form.sign_var[active_boundary],
     )
 
-    indices_to_constraints = vcat(jfix, ifix, active, active_boundary)
+    indices_to_constraints = vcat(form.jfix, form.ifix, active, active_boundary)
+    is_con = vcat(
+        trues(length(form.jfix)),
+        falses(length(form.ifix)),
+        trues(length(active)),
+        falses(length(active_boundary)),
+    )
 
-    return J_work, indices_to_constraints
+    return J_work, indices_to_constraints, is_con
+end
+
+function build_work_jacobian(nlp, results, active, active_boundary)
+    return build_work_jacobian(standard_form(nlp, results.solution), active, active_boundary)
 end
 
 """
@@ -63,32 +56,11 @@ function check_LICQ(
 
     active, active_boundary = find_active(nlp, results, active_method)
 
-    Jac, indices_to_constraints = build_work_jacobian(nlp, results, active, active_boundary)
+    Jac, indices_to_constraints, is_con = build_work_jacobian(nlp, results, active, active_boundary)
 
     list_degen_cons = find_degenerate(Jac, degen_method)
 
-    # Return
-    rep = []
-
-    n_jfix = length(nlp.meta.jfix)
-    n_ifix = length(nlp.meta.ifix)
-    n_a = length(active)
-
-    for degen_cons in list_degen_cons
-        cons = []
-        bounds = []
-        for i in degen_cons
-            if i <= n_jfix || n_jfix + n_ifix + 1 <= i <= n_jfix + n_ifix + n_a
-                push!(cons, indices_to_constraints[i])
-            else
-                push!(bounds, indices_to_constraints[i])
-            end
-        end
-
-        push!(rep, (constraints = cons, bounds = bounds))
-    end
-
-    return rep
+    return [split_cons_bounds(degen_cons, indices_to_constraints, is_con) for degen_cons in list_degen_cons]
 end
 
 
@@ -118,41 +90,24 @@ function check_MFCQ(
 
     active, active_boundary = find_active(nlp, results, active_method)
 
-    n_jfix = length(nlp.meta.jfix)
-    n_ifix = length(nlp.meta.ifix)
-    n_a = length(active)
-    n_ab = length(active_boundary)
-
-    if n_a + n_ab == 0
+    if isempty(active) && isempty(active_boundary)
         @warn "No active constraints found; consider using check_LICQ instead"
     end
-    
-    Jac, indices_to_constraints_dir = build_work_jacobian(nlp, results, active, active_boundary)
 
-    direction_return = check_MFCQ_direction(Jac, n_jfix + n_ifix, direction_method)    # TODO Smarter more general return ?
-    
-    Jac, indices_to_constraints_jac = build_work_jacobian(nlp, results, [], [])
-    
-    list_degen_cons = find_degenerate(Jac, degen_method)
+    form = standard_form(nlp, results.solution)
+    n_eq = length(form.jfix) + length(form.ifix)
 
-    # Return
-    rep = (direction_solution = direction_return, dependent_constraints = []) # TODO find a smarter way to transmit the direction information
+    Jac, _ = build_work_jacobian(form, active, active_boundary)
 
-    for degen_cons in list_degen_cons
-        cons = []
-        bounds = []
-        for i in degen_cons
-            if i <= n_jfix || n_jfix + n_ifix + 1 <= i <= n_jfix + n_ifix + n_a 
-                push!(cons, indices_to_constraints_jac[i])
-            else
-                push!(bounds, indices_to_constraints_jac[i])
-            end
-        end
+    direction_return = check_MFCQ_direction(Jac, n_eq, direction_method)    # TODO Smarter more general return ?
 
-        push!(rep.dependent_constraints, (constraints = cons, bounds = bounds))
-    end
+    Jac_eq, indices_to_constraints, is_con = build_work_jacobian(form, Int[], Int[])
 
-    return rep
+    list_degen_cons = find_degenerate(Jac_eq, degen_method)
+
+    dependent_constraints = [split_cons_bounds(degen_cons, indices_to_constraints, is_con) for degen_cons in list_degen_cons]
+
+    return (direction_solution = direction_return, dependent_constraints = dependent_constraints) # TODO find a smarter way to transmit the direction information
 end
 
 
@@ -166,7 +121,7 @@ Takes the following arguments:
 - `results`: Point studied
 - `tol::Float64`
 
-Returns a list of named tuples with 2 fields: `constraints` and `bounds` corresponding to a set of dependent constraints/bounds.
+Returns a named tuple with 2 fields: `constraints` and `bounds` containing the indices of the constraints/bounds violating SCS.
 """
 function check_SCS(nlp::NLPModels.AbstractNLPModel, results, tol::Float64)
     n = NLPModels.get_nvar(nlp)
@@ -200,19 +155,19 @@ function check_SCS(nlp::NLPModels.AbstractNLPModel, results, tol::Float64)
 end
 
 """
-    check_dulmage_mendelsohn(nlp, results, active_method)
+    check_dulmage_mendelsohn(nlp, results, active_method, tol)
 
 Computes the equality and active jacobian at results, then creates the factor graph between constraints and variables by using the jacobian to determine if a given constraint depends on a given variable. Then applies the Dulmage-Mendelsohn decomposition [DulmageandMendelsohn-1958](@cite) to the factor graph, this method is based on the paper [Dulmage-Mendelsohn_method-2023](@cite). The given tolerance is used to decide if a value in the jacobian is zero.
 
 Return
 A named tuple with three fields `variables`, `constraints` and `bounds`,
-Each are a named tuple with the folowing fields:
+Each are a named tuple with the following fields:
 -`oc`: Overconstrained elements
 -`uc`: Underconstrained elements
 -`sq`: Well defined elements (square set)
 
 References:
-[DulmageandMendelsohn-1958] Dulage and Mendelsohn - 1958 - Coverings of Bipartite Graphs
+[DulmageandMendelsohn-1958] Dulmage and Mendelsohn - 1958 - Coverings of Bipartite Graphs
 
 [Dulmage-Mendelsohn_method-2023] Parker, Nicholson, Siirola, Biegler - 2023 - Applications of the Dulmage–Mendelsohn decomposition for debugging
 nonlinear optimization problems
@@ -225,7 +180,7 @@ function check_dulmage_mendelsohn(
 )
     active, active_boundary = find_active(nlp, results, active_method)
 
-    Jac, indices_to_constraints = build_work_jacobian(nlp, results, active, active_boundary)
+    Jac, indices_to_constraints, is_con = build_work_jacobian(nlp, results, active, active_boundary)
     n_jac, n = size(Jac)
     A = collect(1:n)
     B = collect(1:n_jac)
@@ -238,25 +193,11 @@ function check_dulmage_mendelsohn(
         end
     end
 
-    n_jfix = length(nlp.meta.jfix)
-    n_ifix = length(nlp.meta.ifix)
-    n_a = length(active)
-
     dm_var, dm_con = dulmage_mendelsohn(A, B, E)
 
-    iscon(x) = x <= n_jfix || n_jfix + n_ifix + 1 <= x <= n_jfix + n_ifix + n_a
-
-    dm_con_rep = (
-        oc = indices_to_constraints[filter(iscon, dm_con.oc)],
-        uc = indices_to_constraints[filter(iscon, dm_con.uc)],
-        sq = indices_to_constraints[filter(iscon, dm_con.sq)],
-    )
-
-    dm_bound_rep = (
-        oc = indices_to_constraints[filter(!iscon, dm_con.oc)],
-        uc = indices_to_constraints[filter(!iscon, dm_con.uc)],
-        sq = indices_to_constraints[filter(!iscon, dm_con.sq)],
-    )
+    dm_split = map(rows -> split_cons_bounds(rows, indices_to_constraints, is_con), dm_con)
+    dm_con_rep = map(s -> s.constraints, dm_split)
+    dm_bound_rep = map(s -> s.bounds, dm_split)
 
     return (variables = dm_var, constraints = dm_con_rep, bounds = dm_bound_rep)
 end

@@ -39,7 +39,7 @@ end
 # constructor
 function FeasL1Model(nlp::NLPModels.AbstractNLPModel{T, S}) where {T, S}
     if (nlp.meta.ncon == 0)
-        @warn "input problem $(nlp.meta.name) is unconstrained, not generating the feasibily problem model"
+        @warn "input problem $(nlp.meta.name) is unconstrained, not generating the feasibility problem model"
         return nlp
     end    
 

@@ -75,7 +75,7 @@ Solves the problem
 ```
 max_{t,d}   t
 subject to  Jac_eq * d == 0     Jac_eq the jacobian of equality constraints
-            Jac_ineq * d <= t   Jac_ineq the jacobian of inequality constraints
+            Jac_ineq * d <= -t  Jac_ineq the jacobian of inequality constraints
             -K <= d <= K    
 
 ```
@@ -89,7 +89,7 @@ the optimal solution of the above problem in the form of a named tuple with 2 fi
 function check_MFCQ_direction(Jac, n_eq, method::MFCQDirectionPrimal)
 
     if isempty(Jac)
-        return (direction = [], slack = [])
+        return (direction = [], slack = NaN)
     end
 
     n_jac, n = size(Jac)
@@ -114,10 +114,10 @@ function check_MFCQ_direction(Jac, n_eq, method::MFCQDirectionPrimal)
     end
 
     if n_ineq != 0
-        @variable(model, t[1:n_ineq])
-        @constraint(model, Jac[1+n_eq : n_jac,:] * d <= -t)
+        @variable(model, t)
+        @constraint(model, Jac[1+n_eq : n_jac,:] * d .<= -t)
 
-        @expression(model, obj_term, sum(t))
+        @expression(model, obj_term, t)
     else
         @expression(model, obj_term, 0.)
     end
@@ -131,9 +131,9 @@ function check_MFCQ_direction(Jac, n_eq, method::MFCQDirectionPrimal)
     end
 
     if n_ineq != 0
-        t_sol = value.(t)
+        t_sol = value(t)
     else
-        t_sol = []
+        t_sol = NaN
     end
 
     d_sol = value.(d)

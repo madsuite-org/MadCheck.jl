@@ -10,7 +10,7 @@ function check_SOSC(nlp, results, active_method::AbstractActiveSetMethod, tol::F
     # Jacobian
     active, active_boundary = find_active(nlp, results, active_method)
 
-    Jac, indices_to_constraints = build_work_jacobian(nlp, results, active, active_boundary)
+    Jac, _ = build_work_jacobian(nlp, results, active, active_boundary)
     n_jac, n = size(Jac)
 
     # Checks

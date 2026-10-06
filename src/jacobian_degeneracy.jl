@@ -20,7 +20,7 @@ end
 """
     DegenJacSVD(; kwargs...)
 
-Creates an DegenJacSVD with `tol` = 1e-8.
+Creates a DegenJacSVD with `tol` = 1e-8.
 """
 DegenJacSVD(; tol = 1e-8) = DegenJacSVD(tol)
 
@@ -39,7 +39,7 @@ end
 """
     DegenJacQR(; kwargs...)
 
-Creates an DegenJacQR with `tol` = 1e-8.
+Creates a DegenJacQR with `tol` = 1e-8.
 """
 DegenJacQR(; tol = 1e-8) = DegenJacQR(tol)
 
@@ -51,11 +51,11 @@ Contains the following parameters:
 -`silent`: bool setting the optimization solver used to silent (true) or not (false)
 -`tol`: tolerance of the method
 -`solver`: solver used for the MILP subproblems solved in the method
--`solver_options`: additional JuMP options to be given to the solver)
+-`solver_options`: additional JuMP options to be given to the solver
 -`M`: big M-value used for the MILP (see [DowlingandBiegler-2015](@cite))
 
 Reference:
-[DowlingandBiegler-2015] Dowling and Giegler - 2015 - Degeneracy Hunter: An Algorithm for Determining Irreducible Sets of Degenerate Constraints in Mathematical Programs
+[DowlingandBiegler-2015] Dowling and Biegler - 2015 - Degeneracy Hunter: An Algorithm for Determining Irreducible Sets of Degenerate Constraints in Mathematical Programs
 """
 struct DegenHunterJac <: AbstractDegenJacMethod
     silent::Bool
@@ -68,7 +68,7 @@ end
 """
     DegenHunterJac(solver, M; kwargs...)
 
-Create an DegenHunterJac where all fields can be specified as keyword arguments, a MILP solver and the big-M parameter must be provided.
+Create a DegenHunterJac where all fields can be specified as keyword arguments, a MILP solver and the big-M parameter must be provided.
 The following default values are set
 -`silent`: true
 -`tol`: 1e-8
@@ -95,7 +95,7 @@ end
 """
     DegenJacDulmageMendelsohn(; kwargs...)
 
-Creates an DegenJacDulmageMendelsohn with `tol` = 1e-8.
+Creates a DegenJacDulmageMendelsohn with `tol` = 1e-8.
 """
 DegenJacDulmageMendelsohn(; tol = 1e-8) = DegenJacDulmageMendelsohn(tol)
 
@@ -103,7 +103,7 @@ DegenJacDulmageMendelsohn(; tol = 1e-8) = DegenJacDulmageMendelsohn(tol)
 """
     find_degenerate(Jac, method::DegenJacSVD)
 
-Finds the dependent rows in the matrice Jac using it's singular value decomposition.
+Finds the dependent rows in the matrix Jac using its singular value decomposition.
 
 Return
 list of vectors of indices corresponding to dependent sets of rows of Jac
@@ -145,7 +145,7 @@ end
 """
     find_degenerate(Jac, method::DegenJacQR)
 
-finds m-r rows of that Jac that can be expressed as a linear combination of the others  (were r is the rank of Jac and m)
+Finds m-r rows of Jac that can be expressed as a linear combination of the others (where r is the rank of Jac and m its number of rows)
 
 Return
 list containing one vector: a set of row indices that are dependent on the other rows
@@ -185,7 +185,7 @@ Return:
 list of vectors of indices where each vector corresponds to an irreducible degeneracy set.
 
 Reference:
-[DowlingandBiegler-2015] Dowling and Giegler - 2015 - Degeneracy Hunter: An Algorithm for Determining Irreducible Sets of Degenerate Constraints in Mathematical Programs
+[DowlingandBiegler-2015] Dowling and Biegler - 2015 - Degeneracy Hunter: An Algorithm for Determining Irreducible Sets of Degenerate Constraints in Mathematical Programs
 """
 function find_degenerate(Jac, method::DegenHunterJac)
     if iszero(Jac)
@@ -219,7 +219,7 @@ function find_degenerate(Jac, method::DegenHunterJac)
         @constraint(model, λ[j] == 1)
         @constraint(model, [i = 1:n_jac], -y[i] * M<= λ[i])
         @constraint(model, [i = 1:n_jac], y[i] * M >= λ[i])
-        @constraint(model, [i = 1:n], (Jac_t*λ)[i] == 0)
+        @constraint(model, Jac_t * λ .== 0)
 
         optimize!(model)
 
@@ -229,7 +229,7 @@ function find_degenerate(Jac, method::DegenHunterJac)
             error("For line $j of the work Jacobian, MILP failed to converge : $(termination_status(model))")
         end
 
-        degen_columns = findall(!iszero, value.(y))
+        degen_columns = findall(value.(y) .> 0.5)
 
         if !(Set(degen_columns) in Set.(irreducible_sets))
             push!(irreducible_sets, degen_columns)
@@ -249,7 +249,7 @@ Return
 The constraints in the overconstrained set (see [Dulmage-Mendelsohn_method-2023](@cite))
 
 References:
-[DulmageandMendelsohn-1958] Dulage and Mendelsohn - 1958 - Coverings of Bipartite Graphs
+[DulmageandMendelsohn-1958] Dulmage and Mendelsohn - 1958 - Coverings of Bipartite Graphs
 
 [Dulmage-Mendelsohn_method-2023] Parker, Nicholson, Siirola, Biegler - 2023 - Applications of the Dulmage–Mendelsohn decomposition for debugging
 nonlinear optimization problems
